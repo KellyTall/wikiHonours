@@ -1,0 +1,60 @@
+---
+title: "Wiki Honours - Overview of Data"
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+author: "Kelly Tall"
+date: "15/08/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data source
+
+The honours data set was downloaded from   <https://honours.pmc.gov.au/honours/search>.
+
+The award names selected were:
+Dame of the Order of Australia
+Knight of the order of Australia
+Companion of the Order of Australia
+Medal
+Member
+Officer
+
+Dates of these awards ranged from XX to XX
+
+The number of each award extracted in total 
+
+
+The fields that were extracted for eachreord are:
+
+An example fo the first XX records and the informatio held are:
+
+Data Set creation process: 
+
+
+
+
+
+
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
