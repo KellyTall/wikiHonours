@@ -1,5 +1,5 @@
 ---
-title: "Wiki Honours - Overview of Data"
+title: "<h1>Who do we think we are:</h1> <h3>Overview of Dataset Preparation</h3>"
 knit: (function(input_file, encoding) {
   out_dir <- 'docs';
   rmarkdown::render(input_file,
@@ -7,54 +7,185 @@ knit: (function(input_file, encoding) {
  output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 author: "Kelly Tall"
 date: "15/08/2020"
-output: html_document
+
+
+output: 
+        html_document:
+                df_print: paged        
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+# install.packages("WikidataR")
+# install.packages("WikipediR")
+# install.packages("tidyverse")
+# install.packages("rlist")
+# install.packages("WikidataQueryServiceR")
+
+
+library(tidyverse)
+library(rlist)
+
+
+
+# load data ---------------------------------------------------------------
+
+##honours data sets
+OAqBday <- read_csv("OA_QueenBDay.csv")
+OAausDay <- read_csv("OA_AusDay.csv")
+
+##honours list merged
+OAFullList <- bind_rows(OAqBday, OAausDay)
+
+##match with wikidata
+wikidataMatch <- read_csv("wikiDataMatch.csv") 
+
+##Australian match with wikidata
+wikidataAusMatch <- read_csv("wikidataAusMatch.csv")
+
+##match with wikipedia
+wikipediaMatch <- read_csv("wikipediaMatch.csv") %>% 
+  drop_na(pageid) 
+
+
+
+# pageCreation <- read.csv("pageCreation.csv")
+
+
+
+
+
+
+
+
 ```
 
-## Data source
+### Project Summary and Aims
 
-The honours data set was downloaded from   <https://honours.pmc.gov.au/honours/search>.
+The two core analysis aims are:
 
-The award names selected were:
-Dame of the Order of Australia
-Knight of the order of Australia
-Companion of the Order of Australia
-Medal
-Member
-Officer
-
-Dates of these awards ranged from XX to XX
-
-The number of each award extracted in total 
-
-
-The fields that were extracted for eachreord are:
-
-An example fo the first XX records and the informatio held are:
-
-Data Set creation process: 
+1. Capture the number of wikipedia pages created for people who have are recipients of an Order of Australia.
+* what is the proporation on those holding an honour who have a wikipedia page v those who do not have a page.
+  + examine by Order held
+  + examine by state 
 
 
 
+2. For whose who have a wikipedia page, capture the date of creation of their page
+* illustrate the proportions of pages created pre and post award
+  
+<i>(any more to add?)</i> 
 
+### Honours Data source and Extraction 
 
+The honours data set was downloaded from <a href="https://honours.pmc.gov.au/honours/search">The Australian Honours Search Facility</a> published by the Department of the Prime Minster and Cabinet.
 
+The records were extracted from this database for all of the Order of Australia Awards issued since 1975, and extracted based on the following award levels:
+        
+1. Dame of the Order of Australia 
+2. Knight of the Order of Australia  
+3. Companion (AC) 
+4. Officer (AO) 
+5. Member (AM) 
+6. Medal (OAM) 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+More information about the Order of Australia can be found here: https://en.wikipedia.org/wiki/Order_of_Australia
 
-```{r cars}
-summary(cars)
+The data set represents a total of <b>`r nrow(OAFullList)`</b> hounours with each row of the data set an individual reward recipient.
+
+The data variables in our set are:
+
+```{r , echo=FALSE}
+colnames(OAFullList)
+
 ```
 
-## Including Plots
+The data extracted is shown for the first few rows of the data set as below:
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r echo=FALSE, rows.print=7}
+head(OAFullList)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+### Merging Honours with Wikidata information
+
+Names of Order of Australia recipients were then passed through wikidata to gather more information, such as description of the person and their aliases. 
+
+The reason for this was to ensure that names (normally awarded to the recipient with their full name), could also be matched to any other names they are known by. The query was run using an R package (<a href="https://cran.r-project.org/web/packages/WikidataR/WikidataR.pdf">wikidataR</a>) that accesses the wikiData API and matches not only the name the award is given to, but also any alias that is listed in a wikiData entry.  For example, Bob Hawke is listed as;
+
+<b>Bob Hawke</b>
+
+* Description:
+  + Australian politician, 23rd Prime Minister of Australia
+
+* Also known as: 
+  + Bob Hawke
+  + The Honourable Bob Hawke
+  + Robert James Lee "Bob" Hawke
+  + Robertus Iacobus Lee Hawke (latin)
+  + Robertus Hawke (latin)
+  + 鮑勃·霍克 (chinese)
+        
+For his AC, he was named as "Mr Robert James Lee HAWKE". The API searches against his name and aliases to give us a match.
+
+This match of Order of Australia recipients with a wikiData match returned the following information:
+
+```{r echo=FALSE, cols.print =4 ,rows.print=7}
+head(wikidataMatch)
+```
+
+The description provided in the wikiData record often incuded key words such as "Australian". Using these as a starting point, this data set was filtered to include any mention of "Australian", as well as oher key words or phrases such as "Queensland", "Tasmania", "New South Wales" etc. Likewise, other words such as "United States", "Dutch", "Spanish" etc were excluded from the list in the absensce of an Australian related term. 
+
+I extended the search beyond those wikidata entries that included an Order of Australia in a record, after testing out several entries it apperared not all included the award. 
+
+
+Once this filtering and matching was done based on the decsription field, there was a list of "unallocated" records that I sifted through manually, and allocated to the Australian list if there was a match. This was done using other information contained in the wikiData entry or in the Honours information.
+
+A final edit was undertaken to remove cases that referred to other "non-person" items such as parks, ovals, reserves, artciles, discographies, filmographies, foundations etc that may have included the name of the award recipient. 
+
+The information is displayed below showing the head of the data set.   
+
+```{r echo=FALSE, cols.print =4 ,rows.print=7}
+head(wikidataAusMatch)
+```
+
+### Matching names to wikipedia pages
+
+Each of these entries were then matched back to wikipedia to get the page URL and page ID number if it existed. 
+
+Of the `r nrow(OAFullList)` records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was `r nrow(wikidataAusMatch)`. Once this was filtered for entries that relate to Australia, we have a final data set of `r nrow(wikipediaMatch)` entries to match against Wikipedia. 
+
+
+```{r echo=FALSE, cols.print =4 ,rows.print=7}
+head(wikipediaMatch)
+```
+
+
+### Extracting a page creation date  
+
+Each wikipedia page match has also been allocated a page creation date.
+
+https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvlimit=1&rvprop=timestamp&rvdir=newer&pageids=Q2075218 
+
+The above query asks to sort all revisions from oldest to most recent, and pull top timestamp , for page ID 2352403. Using a loop function, each page was queried using the wikipedia ID and the timstamp was recorded.  
+
+(This query was found via a search on <a href="https://stackoverflow.com/questions/43898352/how-to-get-date-of-creation-of-wikipedia-page-by-api">stackoverflow</a> and I built a simple scraper to store the time stamp against the page id.) 
+
+<i>kelly to do: data details to come </i>
+
+### Final data merge
+
+All data sets were then merged together, into a final data set.
+(more to come)
+
+### Data set and process limitations
+
+There are pros and cons to this method. It speeds up a manual process of checking if the matched records are Order of Australia award recipients. It also means that inadvertantly a record may have been included that may not have been an Order of Australia recipient, but had a name and text identifyer (such as "Australian", "Queensland" etc) match. 
+
+For example Bob Smith has received an AM. He has no wikiData entry. Bob Smith does not have an AM, but has a wikiData entry and a description that says "Australian medical researcher". The second Bob Smith  will be included in the list that is matched to the wikipedia query, even though he has no award. If we also has a wikipedia page he will be included in the final data set.
+
+If an award recipient's description included another country but did not mention "Australia" or other Australian related terms, it will not included in the list. For example Jane A Smith has a wikidata entry. She has receievd an OA. Her decription says "Italian-born artist". She would be excluded from our list based on the presence of "Italian" without an Australian qualifier. If Jane Smith has an OA and is described as an "Italian-born Australian artist" she is included on our list.
+
+It is hypothesised that these examples are the exception rather than the rule, and the majorty of matching cases identified in process are correct. A manual check of approx 500 cases resulted in five match errors. 
+
