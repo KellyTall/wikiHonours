@@ -45,12 +45,13 @@ wikidataMatch <- read_csv("wikiDataMatch.csv")
 wikidataAusMatch <- read_csv("wikidataAusMatch.csv")
 
 ##match with wikipedia
-wikipediaMatch <- read_csv("wikipediaMatch.csv") %>% 
-  drop_na(pageid) 
+
+wikipediaMatch <- read_csv("wikipediaMatch.csv") 
 
 
 
-# pageCreation <- read.csv("pageCreation.csv")
+pageCreation <- read.csv("pageCreation.csv")
+
 
 
 
@@ -135,7 +136,7 @@ This match of Order of Australia recipients with a wikiData match returned the f
 head(wikidataMatch)
 ```
 
-The description provided in the wikiData record often incuded key words such as "Australian". Using these as a starting point, this data set was filtered to include any mention of "Australian", as well as oher key words or phrases such as "Queensland", "Tasmania", "New South Wales" etc. Likewise, other words such as "United States", "Dutch", "Spanish" etc were excluded from the list in the absensce of an Australian related term. 
+The description provided in the wikiData record often incuded key words such as "Australian". Using these as a starting point, this data set was filtered to include any mention of "Australian", as well as other key words or phrases such as "Queensland", "Tasmania", "New South Wales" etc. Likewise, other words such as "United States", "Dutch", "Spanish" etc were excluded from the list in the absensce of an Australian related term. 
 
 I extended the search beyond those wikidata entries that included an Order of Australia in a record, after testing out several entries it apperared not all included the award. 
 
@@ -154,7 +155,7 @@ head(wikidataAusMatch)
 
 Each of these entries were then matched back to wikipedia to get the page URL and page ID number if it existed. 
 
-Of the `r nrow(OAFullList)` records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was `r nrow(wikidataAusMatch)`. Once this was filtered for entries that relate to Australia, we have a final data set of `r nrow(wikipediaMatch)` entries to match against Wikipedia. 
+Of the <b>`r nrow(OAFullList)`</b> records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was <b>`r nrow(wikidataAusMatch)`</b>. Once this was filtered for matches to a wikipedia page, there was a match of <b>`r nrow(wikipediaMatch)`</b> articles
 
 
 ```{r echo=FALSE, cols.print =4 ,rows.print=7}
@@ -171,6 +172,11 @@ https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvlimit=1&rvprop=
 The above query asks to sort all revisions from oldest to most recent, and pull top timestamp , for page ID 2352403. Using a loop function, each page was queried using the wikipedia ID and the timstamp was recorded.  
 
 (This query was found via a search on <a href="https://stackoverflow.com/questions/43898352/how-to-get-date-of-creation-of-wikipedia-page-by-api">stackoverflow</a> and I built a simple scraper to store the time stamp against the page id.) 
+
+```{r echo=FALSE, cols.print =4 ,rows.print=7}
+head(pageCreation)
+```
+
 
 <i>kelly to do: data details to come </i>
 
