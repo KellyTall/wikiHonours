@@ -155,6 +155,7 @@ head(wikidataAusMatch)
 
 Each of these entries were then matched back to wikipedia to get the page URL and page ID number if it existed. 
 
+
 Of the <b>`r nrow(OAFullList)`</b> records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was <b>`r nrow(wikidataAusMatch)`</b>. 
 
 Once this was filtered for matches to a wikipedia page, there was a match of <b>`r nrow(wikipediaMatch)`</b> articles
