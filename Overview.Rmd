@@ -39,7 +39,9 @@ OAausDay <- read_csv("OA_AusDay.csv")
 OAFullList <- bind_rows(OAqBday, OAausDay)
 
 ##match with wikidata
-wikidataMatch <- read_csv("wikiDataMatch.csv") 
+wikidataMatch <- read_csv("wikidataMatch.csv") %>% 
+  select(-X1)
+
 
 ##Australian match with wikidata
 wikidataAusMatch <- read_csv("wikidataAusMatch.csv")
@@ -51,6 +53,7 @@ wikipediaMatch <- read_csv("wikipediaMatch.csv")
 
 
 pageCreation <- read.csv("pageCreation.csv")
+  
 
 
 
@@ -153,7 +156,7 @@ head(wikidataAusMatch)
 
 ### Matching names to wikipedia pages
 
-Each of these entries were then matched back to wikipedia to get the page URL and page ID number if it existed. 
+Each of these entries were then matched back to using their wikidataID to capture the wikipedia URL if it existed. 
 
 
 Of the <b>`r nrow(OAFullList)`</b> records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was <b>`r nrow(wikidataAusMatch)`</b>. 
@@ -161,7 +164,7 @@ Of the <b>`r nrow(OAFullList)`</b> records extracted from the honours data base,
 Once this was filtered for matches to a wikipedia page, there was a match of <b>`r nrow(wikipediaMatch)`</b> articles
 
 
-```{r echo=FALSE, cols.print =4 ,rows.print=7}
+```{r echo=FALSE, cols.print =2 ,rows.print=7}
 head(wikipediaMatch)
 ```
 
