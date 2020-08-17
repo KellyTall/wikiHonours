@@ -1736,7 +1736,8 @@ Overview of Dataset Preparation
 <div id="matching-names-to-wikipedia-pages" class="section level3">
 <h3>Matching names to wikipedia pages</h3>
 <p>Each of these entries were then matched back to wikipedia to get the page URL and page ID number if it existed.</p>
-<p>Of the <b>41303</b> records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was <b>2828</b>. Once this was filtered for entries that relate to Australia, there was a match of <b>2474</b> entries that match against Wikipedia.</p>
+<p>Of the <b>41303</b> records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was <b>2828</b>.</p>
+<p>Once this was filtered for matches to a wikipedia page, there was a match of <b>2474</b> articles</p>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["wikipediaURL"],"name":[1],"type":["chr"],"align":["left"]},{"label":["fullName"],"name":[2],"type":["chr"],"align":["left"]}],"data":[{"1":"https://en.wikipedia.org/wiki/John_Brew","2":"John Brew"},{"1":"https://en.wikipedia.org/wiki/Kaye_Basford","2":"Kaye Basford"},{"1":"https://en.wikipedia.org/wiki/Marcello_Costa","2":"Marcello Costa"},{"1":"https://en.wikipedia.org/wiki/Georgina_Long","2":"Georgina Long"},{"1":"https://en.wikipedia.org/wiki/Sarah_Medland","2":"Sarah Medland"},{"1":"https://en.wikipedia.org/wiki/John_Vogels","2":"John Vogels"}],"options":{"columns":{"min":{},"max":[4]},"rows":{"min":[7],"max":[7]},"pages":{}}}
@@ -1758,7 +1759,18 @@ Overview of Dataset Preparation
 </div>
 <div id="final-data-merge" class="section level3">
 <h3>Final data merge</h3>
-<p>All data sets were then merged together, into a final data set. (more to come)</p>
+<p>All data sets were then merged together, into a final data set.</p>
+<p>Kelly To do:</p>
+<p>merge honours to wikipage file with creation date Fields to include:</p>
+<ul>
+<li>fullName</li>
+<li>honours ID</li>
+<li>honours level</li>
+<li>honours state</li>
+<li>wikimediaID</li>
+<li>wikipediaID</li>
+<li>page creation date</li>
+</ul>
 </div>
 <div id="data-set-and-process-limitations" class="section level3">
 <h3>Data set and process limitations</h3>
