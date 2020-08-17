@@ -186,7 +186,23 @@ head(pageCreation)
 ### Final data merge
 
 All data sets were then merged together, into a final data set.
-(more to come)
+
+
+Kelly To do:
+
+merge honours to wikipage file with creation date
+Fields to include:
+
+* fullName
+* honours ID
+* honours level
+* honours state
+* wikimediaID
+* wikipediaID
+* page creation date
+
+
+
 
 ### Data set and process limitations
 
