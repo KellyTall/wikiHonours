@@ -81,6 +81,28 @@ The two core analysis aims are:
   
 <i>(any more to add?)</i> 
 
+### Summary of process  
+
+1. Extracted all Order of Australia records from <a href="https://honours.pmc.gov.au/honours/search">The Australian Honours Search Facility</a><br>
+2. Matched names of award recipients with all wikidata records using R package <a href="https://cran.r-project.org/web/packages/WikidataR/WikidataR.pdf">wikidataR</a>. This yielded TO DO: (insert # of records)<br>
+3. sorted all matches into three "buckets" <br> 
+   i) all items that have some "Australianess" in their decsription 
+   ii) all items that have "not-Australianess" in their description 
+   iii) all items that have neither "Australianess" or "not-Australianess" in their description  
+4. Items in the "neither" bucket where manually checked to see if they were a match to an Order of Australian recipient and moved either into the "Australianess" bucket or the "not-Australianess" <br> 
+5. Dupliacte records were then extracted from the "Australianess" bucket, were a name from the Order of Australia list was matched with a name of two or more wikidata entries. This was sorted manually by comparing the description from wikidata with the description of the merit. <br> 
+6. Part of the "Australianess" bucket was then tested for errors. Again, the description from wikidata was compared against the descipriton of the award from the
+Order of Australia list. From 100 enries selected, there were five incorrectly matched, and these were removed. <br> 
+7. This list was then finalised, and the wikidataID was used in a scraper to extract the linked wikipedia article and article ID from wikidata <b>TO DO: need to check wiht Prue or Toby: is assumption correct that if a wikipedia page exists, there will be a wikidata entry, AND there will be a wikipedia page listed in the wikidata record)</b> <br> 
+8. The edits of each matched wikipedia page were then scraped to extract the page creation date <br> 
+
+<b>To do: insert table showing tally of records for each stage</b>
+
+Of the <b>`r nrow(OAFullList)`</b> records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was <b>`r nrow(wikidataAusMatch)`</b>. 
+
+Once this was filtered for matches to a wikipedia page, there was a match of <b>`r nrow(wikipediaMatch)`</b> articles
+
+
 ### Honours Data source and Extraction 
 
 The honours data set was downloaded from <a href="https://honours.pmc.gov.au/honours/search">The Australian Honours Search Facility</a> published by the Department of the Prime Minster and Cabinet.
@@ -139,10 +161,7 @@ This match of Order of Australia recipients with a wikiData match returned the f
 head(wikidataMatch)
 ```
 
-The description provided in the wikiData record often incuded key words such as "Australian". Using these as a starting point, this data set was filtered to include any mention of "Australian", as well as other key words or phrases such as "Queensland", "Tasmania", "New South Wales" etc. Likewise, other words such as "United States", "Dutch", "Spanish" etc were excluded from the list in the absensce of an Australian related term. 
-
-I extended the search beyond those wikidata entries that included an Order of Australia in a record, after testing out several entries it apperared not all included the award. 
-
+The description provided in the wikidata record often incuded key words such as "Australian". Using these as a starting point, this data set was filtered to include any mention of "Australian", as well as other key words or phrases such as "Queensland", "Tasmania", "New South Wales" etc. Likewise, other words such as "United States", "Dutch", "Spanish" etc were excluded from the list in the absensce of an Australian related term. 
 
 Once this filtering and matching was done based on the decsription field, there was a list of "unallocated" records that I sifted through manually, and allocated to the Australian list if there was a match. This was done using other information contained in the wikiData entry or in the Honours information.
 
@@ -156,12 +175,7 @@ head(wikidataAusMatch)
 
 ### Matching names to wikipedia pages
 
-Each of these entries were then matched back to using their wikidataID to capture the wikipedia URL if it existed. 
-
-
-Of the <b>`r nrow(OAFullList)`</b> records extracted from the honours data base, the match with a wikiData extry with a connection to Australia was <b>`r nrow(wikidataAusMatch)`</b>. 
-
-Once this was filtered for matches to a wikipedia page, there was a match of <b>`r nrow(wikipediaMatch)`</b> articles
+Using the list of Australian matches, the wikidata ID was used in a scraper to get the wikipedia page url and article ID from wikidata. This gave us <b>`r nrow(wikipediaMatch)`</b> wikipedia article links.
 
 
 ```{r echo=FALSE, cols.print =2 ,rows.print=7}
@@ -171,11 +185,11 @@ head(wikipediaMatch)
 
 ### Extracting a page creation date  
 
-Each wikipedia page match has also been allocated a page creation date.
+Each wikipedia page match has also been linked to a page creation date.
 
 https://en.wikipedia.org/w/api.php?action=query&prop=revisions&rvlimit=1&rvprop=timestamp&rvdir=newer&pageids=Q2075218 
 
-The above query asks to sort all revisions from oldest to most recent, and pull top timestamp , for page ID 2352403. Using a loop function, each page was queried using the wikipedia ID and the timstamp was recorded.  
+The above query asks to sort all revisions from oldest to most recent, and pull top timestamp , for page ID 2352403. Using a loop function, this query was scarped using the wikipedia ID of each matched article, and the timstamp was recorded.  
 
 (This query was found via a search on <a href="https://stackoverflow.com/questions/43898352/how-to-get-date-of-creation-of-wikipedia-page-by-api">stackoverflow</a> and I built a simple scraper to store the time stamp against the page id.) 
 
@@ -183,8 +197,6 @@ The above query asks to sort all revisions from oldest to most recent, and pull 
 head(pageCreation)
 ```
 
-
-<i>kelly to do: data details to come </i>
 
 ### Final data merge
 
@@ -205,7 +217,7 @@ Fields to include:
 * page creation date
 
 
-
+<br>
 
 ### Data set and process limitations
 
