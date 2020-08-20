@@ -241,7 +241,7 @@ It is hypothesised that these examples are the exception rather than the rule, a
 
 2. What is the breakdown by state?
 
-```{r echo=FALSE, message=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ##chart formats
 
 colours <- c("#2d4059", "#ea5455")
@@ -254,7 +254,7 @@ custom_theme <-  theme(
 
 ```
 
-```{r echo=FALSE, message=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 awardSummaryTotal <- allData %>% 
         select(Award) %>% 
