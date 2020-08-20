@@ -205,22 +205,24 @@ head(pageCreation)
 
 ### Final data merge
 
-All data sets were then merged together, into a final data set.
+All data sets were then merged together, into a final data set. 
+Cases were merged using the following method:
+
+1. a file was created that combined the wikidataID and the wikipedia Page ID, and inluce the scraed page creation date
+2. a second file was created merging the Order of Australia data set and the wikidata information, which passed on the wikidataID.
+3. the two files were merged together using wikidataID as the merge key
 
 
-Kelly To do:
 
-merge honours to wikipage file with creation date
-Fields to include:
+The variables included on the full data set are:
+```{r echo=FALSE}
 
-* fullName
-* honours ID
-* honours level
-* honours state
-* wikimediaID
-* wikipediaID
-* page creation date
+colnames(allData)
 
+```
+
+#### TO DO: 
+<b> Look at pages not picked up in merge with wikidata where alias was not available in the wikidata information. Can use Toby's wd query, extract, then see if we pick up extra pages</b>
 
 <br>
 
