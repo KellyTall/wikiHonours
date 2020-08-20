@@ -1,5 +1,5 @@
 ---
-title: "<h1>Who do we think we are:</h1> <h3>Overview of Dataset Preparation</h3>"
+title: "Who do we think we are?"
 knit: (function(input_file, encoding) {
   out_dir <- 'docs';
   rmarkdown::render(input_file,
@@ -26,6 +26,10 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(rlist)
+library(ggplot2)
+library(plotly)
+library(scales)
+library(lubridate)
 
 
 
@@ -52,18 +56,19 @@ wikipediaMatch <- read_csv("wikipediaMatch.csv")
 
 
 
-pageCreation <- read.csv("pageCreation.csv")
+pageCreation <- read_csv("pageCreation.csv")
   
+##all data merge as of 19 August
 
-
-
-
+allData <- read_csv("mergedData.csv")
 
 
 
 
 
 ```
+
+## Overview of Dataset Preparation
 
 ### Project Summary and Aims
 
@@ -229,3 +234,155 @@ If an award recipient's description included another country but did not mention
 
 It is hypothesised that these examples are the exception rather than the rule, and the majorty of matching cases identified in process are correct. A manual check of approx 500 cases resulted in five match errors. 
 
+## Exploratory analysis
+
+#### Overview of Order of Australia honours
+1. How many have been awarded?
+
+2. What is the breakdown by state?
+
+```{r echo=FALSE, message=FALSE}
+##chart formats
+
+colours <- c("#2d4059", "#ea5455")
+
+custom_theme <-  theme(
+                        panel.grid.major.x = element_blank(),
+                        panel.background = element_rect(fill=("#e5e5e5")),
+                        strip.background = element_blank())
+
+
+```
+
+```{r echo=FALSE, message=FALSE}
+
+awardSummaryTotal <- allData %>% 
+        select(Award) %>% 
+        group_by(Award) %>% 
+        tally()
+
+awardSummaryState <- allData %>% 
+        select(Award, state) %>% 
+        group_by(state, Award ) %>% 
+        tally()
+
+
+
+awardTotal <-  ggplot(awardSummaryTotal, aes(reorder(Award, -n), n))+
+  geom_col(fill="#2d4059") +
+  custom_theme+
+  labs(title="Number of award recipients by level of membership", 
+       x="Order of Australia (membership levels)", y="number of awards")
+        
+ggplotly(awardTotal, tooltip="n")
+
+awardState <- ggplot(awardSummaryState, aes(reorder(Award, -n), n))+
+  geom_col(fill="#2d4059") +
+  facet_wrap(~state)+
+  custom_theme+
+  labs(title="Number of award recipients by level of membership by state", 
+       x="Order of Australia (membership levels)", y="number of awards")
+  
+
+ggplotly(awardState, tooltip = "n")
+
+
+```
+
+
+#### How many wikipedia pages are there for Order of Australia recipients?
+
+1. What are the proportion Order of Australia recipients who have a wikipedia page?
+
+2. What are the differences by the order level?
+
+3. Are there any differences by recipient state?
+
+```{r echo=FALSE, message=FALSE}
+
+pagePropTotal <- allData %>% 
+        select(Award, wpPage) %>% 
+        group_by(Award, wpPage) %>% 
+        tally()
+
+pagePropState <- allData %>% 
+        select(Award, wpPage, state) %>% 
+        group_by(Award, wpPage, state) %>% 
+        tally()
+
+
+
+awardWPNum <- ggplot(pagePropTotal, aes(reorder(Award, -n), n)) +
+  geom_col(aes(fill=wpPage)) +
+  custom_theme+
+  labs(title="Number of award recipients that have a wikipedia article page", 
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_fill_manual(values=colours)
+  
+  
+
+ggplotly(awardWPNum, tooltip = "n")
+
+
+awardWPNumState <- ggplot(pagePropState, aes(reorder(Award, -n), n)) +
+  geom_col(aes(fill=wpPage)) +
+  facet_wrap(~state)+
+  custom_theme+
+  labs(title="Number of award recipients that have a wikipedia article page by state", 
+       x="Order of Australia (membership levels)", y="number of awards")+
+  scale_fill_manual(values=colours)
+
+  
+
+ggplotly(awardWPNumState, tooltip = "n")
+
+awardWPProp <- ggplot(pagePropTotal, aes(reorder(Award, -n), n, fill=wpPage)) +
+  geom_bar(position="fill", stat="identity") +
+  custom_theme+
+  labs(title="Proportion of award recipients that have a wikipedia article page", 
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_y_continuous(labels = percent)+
+  scale_fill_manual(values=colours)
+  
+        
+ggplotly(awardWPProp, tooltip="n")
+
+awardWPPropState <- ggplot(pagePropState, aes(reorder(Award, n), n, fill=wpPage)) +
+        geom_bar(position="fill", stat="identity") +
+        facet_wrap(~state)+
+        custom_theme+
+        labs(title="Proportion of award recipients that have a wikipedia article page by state", 
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_y_continuous(labels = percent)+
+  scale_fill_manual(values=colours)
+  
+
+ggplotly(awardWPPropState, tooltip="n")
+
+
+```
+
+#### What can we learn about the page creation date of those who have a wikipedia page?
+
+
+1. How many had pages BEFORE or AFTER they received their Order of Australia? Is this different by order level?
+
+2. Does receiving an order result in a spike of wikipedia pages being created?
+
+3. What is the rate of creation of pages? Has there been peaks? Has it slowed at any time?
+
+
+## Random notes
+<i> These are just small things I find along the way that may not be that important, but are intersting or that I need to follow up on </i>
+
+* Is there a big proportion of rugby and badmington players who have wikidata entries? (could be good to do some alaysis on this sort of thing / proportion of representation by description in wikiData) 
+<br>
+* I nearly missed Bert Newton and Jenny Kee because they had no alias listed in wikidata! I need to go back and do a test on some of the entries that have no match to see if I have missed other people whose names are not listed in full in wikidata. I can use Toby's query for this to cross check
+<br>
+* Can I do some "bag of word" analysis on the award description and see if there are any areas that result in more page creations than others? (scientists v politicians v sorts people etc? see point above about representation in decsription of wikidata as well) 
+<br>
+* I don't currently have gender in my data set, but maybe I can add it and see what turns up? (or even age?) Can match back to wikidata if it exists in the record
+<br>
+* Need to find the entry of the nursing accadmic who is referenced in wikipedia page, but has no page of her own / has a wikidata entry (create list of these poeple to have a look and see who they are)
+<br> 
+* I think I found a few folks that had non eng wikipedia pages (think one was the Producer of shine? - need to check) Is this of interest? Possibly only a v small number. Could scrape the non english pages to see where they have page. (Also - what Australian's in general have been given page in other languages?)
