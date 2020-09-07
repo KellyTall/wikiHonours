@@ -11,7 +11,9 @@ date: "15/08/2020"
 
 output: 
         html_document:
-                df_print: paged        
+                df_print: paged  
+                toc: true
+                toc_float: true      
 ---
 
 ```{r setup, include=FALSE}
@@ -31,6 +33,23 @@ library(plotly)
 library(scales)
 library(lubridate)
 
+
+
+
+
+##below data loads are not final data set, but kept here for the OLD-summarey of process section. Possible to be deleted at later stage
+# New Data set after Alex work on data merging etc 7th September
+
+##full OA st using Alex's extraction that also incudes gender
+OAList <- read_csv("OAList.csv")
+
+##all awards matched with wikipedia pages
+
+allWP <- read_csv("allWP.csv")
+
+
+##all data matched together
+allData <- read_csv("allData.csv")
 
 
 # load data ---------------------------------------------------------------
@@ -60,33 +79,212 @@ pageCreation <- read_csv("pageCreation.csv")
   
 ##all data merge as of 19 August
 
-allData <- read_csv("mergedData.csv")
+allData <- read_csv("allData.csv")
+
+```
+
+## Project Summary and Aims
+
+The two core analysis aims are:
+
+to do: add in text from Heather's outline
+
+
+## Overview of Dataset Preparation
+
+ **to finish 
+
+Initially data was matched using an extraction from the Australian Honours List, and then matched back to wikiedia and wikipedia (see section below - TO DO - ADD LINK). 
+
+Once initial analysis was done, Alex Lum assisted in providing an extraction of wikipedia pages where an order was stated on the page. This led to the Order information being merged back into the wikidata page. This allowed us to extract further wikipedia pages. No additional pages have been created in wikipedia, but we have been able to get a bettr
 
 
 
+### Honours Data Set
+
+The Department of the Prime Minster and Cabinet <a href="https://honours.pmc.gov.au/honours/search">publish a list of Australian Honours recipients</a>. This list includes all recipients of the Order of Australia. 
+
+The records were extracted from this database for all of the Order of Australia Awards issued since 1975, and extracted based on the following award levels:
+        
+1. Dame of the Order of Australia 
+2. Knight of the Order of Australia  
+3. Companion (AC) 
+4. Officer (AO) 
+5. Member (AM) 
+6. Medal (OAM) 
+
+More information about the Order of Australia can be found here: https://en.wikipedia.org/wiki/Order_of_Australia.
+
+While the majority of cases are unique, there are some individuals who have been awarded multiple Orders of Australia. In the analysis shown below, all analysis that references the Honours data set, represents the number and type of awards issued. The number of awards in our data set ar XXXXinsert here###. These awards have been given to XXX individuals.
+A summary of the number of awards given to indivisuals is as follows
+
+(<em>show summary of number of awards by number of people</em>)
+
+
+### Matching the honours data set with wikimedia information
+
+<b>expand on  pr0cess here</b>
+
+1. extract data from wikidata, icluding wikidata URL/ID and wikipedia URL
+2. get wikipedia page ID for all wikipedia articles
+3. use ID to etxract page creation date
+
+
+
+
+
+## Exploratory analysis
+
+#### Overview of Order of Australia honours
+1. How many have been awarded?
+
+2. What is the breakdown by state?
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+##chart formats
+
+colours <- c("#2d4059", "#ea5455")
+
+custom_theme <-  theme(
+                        panel.grid.major.x = element_blank(),
+                        panel.background = element_rect(fill=("#e5e5e5")),
+                        strip.background = element_blank())
+
+
+
+awardSummaryTotal <- allData %>%
+        select(award) %>%
+        group_by(award) %>%
+        tally()
+
+awardSummaryState <- allData %>%
+        select(award, state) %>%
+        group_by(state, award ) %>%
+        tally()
+# 
+
+
+awardTotal <-  ggplot(awardSummaryTotal, aes(reorder(award, -n), n))+
+  geom_col(fill="#2d4059") +
+  custom_theme+
+  labs(title="Number of award recipients by level of membership",
+       x="Order of Australia (membership levels)", y="number of awards")
+
+ggplotly(awardTotal, tooltip="n")
+
+awardState <- ggplot(awardSummaryState, aes(reorder(award, -n), n))+
+  geom_col(fill="#2d4059") +
+  facet_wrap(~state)+
+  custom_theme+
+  labs(title="Number of award recipients by level of membership by state",
+       x="Order of Australia (membership levels)", y="number of awards")
+
+
+ggplotly(awardState, tooltip = "n")
 
 
 ```
 
-## Overview of Dataset Preparation
 
-### Project Summary and Aims
+#### How many wikipedia pages are there for Order of Australia recipients?
 
-The two core analysis aims are:
+1. What are the proportion Order of Australia recipients who have a wikipedia page?
 
-1. Capture the number of wikipedia pages created for people who have are recipients of an Order of Australia.
-* what is the proporation on those holding an honour who have a wikipedia page v those who do not have a page.
-  + examine by Order held
-  + examine by state 
+2. What are the differences by the order level?
+
+3. Are there any differences by recipient state?
+
+```{r echo=FALSE, message=FALSE}
+
+pagePropTotal <- allData %>% 
+        select(award, wpPage) %>% 
+        group_by(award, wpPage) %>% 
+        tally()
+
+pagePropState <- allData %>% 
+        select(award, wpPage, state) %>% 
+        group_by(award, wpPage, state) %>% 
+        tally()
 
 
 
-2. For whose who have a wikipedia page, capture the date of creation of their page
-* illustrate the proportions of pages created pre and post award
+awardWPNum <- ggplot(pagePropTotal, aes(reorder(award, -n), n)) +
+  geom_col(aes(fill=wpPage)) +
+  custom_theme+
+  labs(title="Number of award recipients that have a wikipedia article page", 
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_fill_manual(values=colours)
   
-<i>(any more to add?)</i> 
+  
 
-### Summary of process  
+ggplotly(awardWPNum, tooltip = "n")
+
+
+awardWPNumState <- ggplot(pagePropState, aes(reorder(award, -n), n)) +
+  geom_col(aes(fill=wpPage)) +
+  facet_wrap(~state)+
+  custom_theme+
+  labs(title="Number of award recipients that have a wikipedia article page by state", 
+       x="Order of Australia (membership levels)", y="number of awards")+
+  scale_fill_manual(values=colours)
+
+  
+
+ggplotly(awardWPNumState, tooltip = "n")
+
+awardWPProp <- ggplot(pagePropTotal, aes(reorder(award, -n), n, fill=wpPage)) +
+  geom_bar(position="fill", stat="identity") +
+  custom_theme+
+  labs(title="Proportion of award recipients that have a wikipedia article page", 
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_y_continuous(labels = percent)+
+  scale_fill_manual(values=colours)
+  
+        
+ggplotly(awardWPProp, tooltip="n")
+
+awardWPPropState <- ggplot(pagePropState, aes(reorder(award, n), n, fill=wpPage)) +
+        geom_bar(position="fill", stat="identity") +
+        facet_wrap(~state)+
+        custom_theme+
+        labs(title="Proportion of award recipients that have a wikipedia article page by state", 
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_y_continuous(labels = percent)+
+  scale_fill_manual(values=colours)
+  
+
+ggplotly(awardWPPropState, tooltip="n")
+
+
+```
+
+#### What can we learn about the page creation date of those who have a wikipedia page?
+
+
+1. How many had pages BEFORE or AFTER they received their Order of Australia? Is this different by order level?
+
+2. Does receiving an order result in a spike of wikipedia pages being created?
+
+3. What is the rate of creation of pages? Has there been peaks? Has it slowed at any time?
+
+
+## Random notes
+<i> These are just small things I find along the way that may not be that important, but are intersting or that I need to follow up on </i>
+
+* Is there a big proportion of rugby and badmington players who have wikidata entries? (could be good to do some alaysis on this sort of thing / proportion of representation by description in wikiData) 
+<br>
+* Have gender in data set - checing with Alex on if there is way for broader gender classification
+<br>
+* How to handle peopel with multiple awards - multiple honour dates to single page creation date
+<br>
+* Need to find the entry of the nursing accadmic who is referenced in wikipedia page, but has no page of her own / has a wikidata entry (create list of these poeple to have a look and see who they are)
+<br> 
+* I think I found a few folks that had non eng wikipedia pages (think one was the Producer of shine? - need to check) Is this of interest? Possibly only a v small number. Could scrape the non english pages to see where they have page. (Also - what Australian's in general have been given page in other languages?)
+<br> 
+* Can I do some "bag of word" analysis on the award description and see if there are any areas that result in more page creations than others? (scientists v politicians v sorts people etc? see point above about representation in decsription of wikidata as well) 
+<br>
+
+### OLD - Summary of process  
 
 1. Extracted all Order of Australia records from <a href="https://honours.pmc.gov.au/honours/search">The Australian Honours Search Facility</a><br>
 2. Matched names of award recipients with all wikidata records using R package <a href="https://cran.r-project.org/web/packages/WikidataR/WikidataR.pdf">wikidataR</a>. This yielded TO DO: (insert # of records)<br>
@@ -108,7 +306,7 @@ Of the <b>`r nrow(OAFullList)`</b> records extracted from the honours data base,
 Once this was filtered for matches to a wikipedia page, there was a match of <b>`r nrow(wikipediaMatch)`</b> articles
 
 
-### Honours Data source and Extraction 
+#### Honours Data source and Extraction 
 
 The honours data set was downloaded from <a href="https://honours.pmc.gov.au/honours/search">The Australian Honours Search Facility</a> published by the Department of the Prime Minster and Cabinet.
 
@@ -139,7 +337,7 @@ head(OAFullList)
 ```
 
 
-### Merging Honours with Wikidata information
+####  Merging Honours with Wikidata information
 
 Names of Order of Australia recipients were then passed through wikidata to gather more information, such as description of the person and their aliases. 
 
@@ -178,7 +376,7 @@ The information is displayed below showing the head of the data set.
 head(wikidataAusMatch)
 ```
 
-### Matching names to wikipedia pages
+#### Matching names to wikipedia pages
 
 Using the list of Australian matches, the wikidata ID was used in a scraper to get the wikipedia page url and article ID from wikidata. This gave us <b>`r nrow(wikipediaMatch)`</b> wikipedia article links.
 
@@ -188,7 +386,7 @@ head(wikipediaMatch)
 ```
 
 
-### Extracting a page creation date  
+#### Extracting a page creation date  
 
 Each wikipedia page match has also been linked to a page creation date.
 
@@ -203,7 +401,7 @@ head(pageCreation)
 ```
 
 
-### Final data merge
+#### Final data merge
 
 All data sets were then merged together, into a final data set. 
 Cases were merged using the following method:
@@ -221,10 +419,6 @@ colnames(allData)
 
 ```
 
-#### TO DO: 
-<b> Look at pages not picked up in merge with wikidata where alias was not available in the wikidata information. Can use Toby's wd query, extract, then see if we pick up extra pages</b>
-
-<br>
 
 ### Data set and process limitations
 
@@ -235,156 +429,3 @@ For example Bob Smith has received an AM. He has no wikiData entry. Bob Smith do
 If an award recipient's description included another country but did not mention "Australia" or other Australian related terms, it will not included in the list. For example Jane A Smith has a wikidata entry. She has receievd an OA. Her decription says "Italian-born artist". She would be excluded from our list based on the presence of "Italian" without an Australian qualifier. If Jane Smith has an OA and is described as an "Italian-born Australian artist" she is included on our list.
 
 It is hypothesised that these examples are the exception rather than the rule, and the majorty of matching cases identified in process are correct. A manual check of approx 500 cases resulted in five match errors. 
-
-## Exploratory analysis
-
-#### Overview of Order of Australia honours
-1. How many have been awarded?
-
-2. What is the breakdown by state?
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-##chart formats
-
-colours <- c("#2d4059", "#ea5455")
-
-custom_theme <-  theme(
-                        panel.grid.major.x = element_blank(),
-                        panel.background = element_rect(fill=("#e5e5e5")),
-                        strip.background = element_blank())
-
-
-```
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-awardSummaryTotal <- allData %>% 
-        select(Award) %>% 
-        group_by(Award) %>% 
-        tally()
-
-awardSummaryState <- allData %>% 
-        select(Award, state) %>% 
-        group_by(state, Award ) %>% 
-        tally()
-
-
-
-awardTotal <-  ggplot(awardSummaryTotal, aes(reorder(Award, -n), n))+
-  geom_col(fill="#2d4059") +
-  custom_theme+
-  labs(title="Number of award recipients by level of membership", 
-       x="Order of Australia (membership levels)", y="number of awards")
-        
-ggplotly(awardTotal, tooltip="n")
-
-awardState <- ggplot(awardSummaryState, aes(reorder(Award, -n), n))+
-  geom_col(fill="#2d4059") +
-  facet_wrap(~state)+
-  custom_theme+
-  labs(title="Number of award recipients by level of membership by state", 
-       x="Order of Australia (membership levels)", y="number of awards")
-  
-
-ggplotly(awardState, tooltip = "n")
-
-
-```
-
-
-#### How many wikipedia pages are there for Order of Australia recipients?
-
-1. What are the proportion Order of Australia recipients who have a wikipedia page?
-
-2. What are the differences by the order level?
-
-3. Are there any differences by recipient state?
-
-```{r echo=FALSE, message=FALSE}
-
-pagePropTotal <- allData %>% 
-        select(Award, wpPage) %>% 
-        group_by(Award, wpPage) %>% 
-        tally()
-
-pagePropState <- allData %>% 
-        select(Award, wpPage, state) %>% 
-        group_by(Award, wpPage, state) %>% 
-        tally()
-
-
-
-awardWPNum <- ggplot(pagePropTotal, aes(reorder(Award, -n), n)) +
-  geom_col(aes(fill=wpPage)) +
-  custom_theme+
-  labs(title="Number of award recipients that have a wikipedia article page", 
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_fill_manual(values=colours)
-  
-  
-
-ggplotly(awardWPNum, tooltip = "n")
-
-
-awardWPNumState <- ggplot(pagePropState, aes(reorder(Award, -n), n)) +
-  geom_col(aes(fill=wpPage)) +
-  facet_wrap(~state)+
-  custom_theme+
-  labs(title="Number of award recipients that have a wikipedia article page by state", 
-       x="Order of Australia (membership levels)", y="number of awards")+
-  scale_fill_manual(values=colours)
-
-  
-
-ggplotly(awardWPNumState, tooltip = "n")
-
-awardWPProp <- ggplot(pagePropTotal, aes(reorder(Award, -n), n, fill=wpPage)) +
-  geom_bar(position="fill", stat="identity") +
-  custom_theme+
-  labs(title="Proportion of award recipients that have a wikipedia article page", 
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_y_continuous(labels = percent)+
-  scale_fill_manual(values=colours)
-  
-        
-ggplotly(awardWPProp, tooltip="n")
-
-awardWPPropState <- ggplot(pagePropState, aes(reorder(Award, n), n, fill=wpPage)) +
-        geom_bar(position="fill", stat="identity") +
-        facet_wrap(~state)+
-        custom_theme+
-        labs(title="Proportion of award recipients that have a wikipedia article page by state", 
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_y_continuous(labels = percent)+
-  scale_fill_manual(values=colours)
-  
-
-ggplotly(awardWPPropState, tooltip="n")
-
-
-```
-
-#### What can we learn about the page creation date of those who have a wikipedia page?
-
-
-1. How many had pages BEFORE or AFTER they received their Order of Australia? Is this different by order level?
-
-2. Does receiving an order result in a spike of wikipedia pages being created?
-
-3. What is the rate of creation of pages? Has there been peaks? Has it slowed at any time?
-
-
-## Random notes
-<i> These are just small things I find along the way that may not be that important, but are intersting or that I need to follow up on </i>
-
-* Is there a big proportion of rugby and badmington players who have wikidata entries? (could be good to do some alaysis on this sort of thing / proportion of representation by description in wikiData) 
-<br>
-* I nearly missed Bert Newton and Jenny Kee because they had no alias listed in wikidata! I need to go back and do a test on some of the entries that have no match to see if I have missed other people whose names are not listed in full in wikidata. I can use Toby's query for this to cross check
-<br>
-* Can I do some "bag of word" analysis on the award description and see if there are any areas that result in more page creations than others? (scientists v politicians v sorts people etc? see point above about representation in decsription of wikidata as well) 
-<br>
-* I don't currently have gender in my data set, but maybe I can add it and see what turns up? (or even age?) Can match back to wikidata if it exists in the record
-<br>
-* Need to find the entry of the nursing accadmic who is referenced in wikipedia page, but has no page of her own / has a wikidata entry (create list of these poeple to have a look and see who they are)
-<br> 
-* I think I found a few folks that had non eng wikipedia pages (think one was the Producer of shine? - need to check) Is this of interest? Possibly only a v small number. Could scrape the non english pages to see where they have page. (Also - what Australian's in general have been given page in other languages?)
