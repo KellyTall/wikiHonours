@@ -268,6 +268,31 @@ ggplotly(awardWPPropState, tooltip="n")
 3. What is the rate of creation of pages? Has there been peaks? Has it slowed at any time?
 
 
+```{r echo=FALSE, message=FALSE}
+prePost <- allData %>%
+  filter(wpPage=="Yes") %>% 
+  filter(prePost!="No wiki") %>% 
+  select(prePost) %>% 
+  group_by(prePost) %>% 
+  tally()
+
+awardprePost <- ggplot(prePost, aes(prePost, n)) +
+  geom_col() +
+  custom_theme+
+  labs(title="Number of pages crated pre / post award", 
+       y="number of wikiPedia Articles") +
+  scale_fill_manual(values=colours)
+  
+  
+
+ggplotly(awardprePost, tooltip = "n")
+
+```
+
+
+
+
+
 ## Random notes
 <i> These are just small things I find along the way that may not be that important, but are intersting or that I need to follow up on </i>
 
