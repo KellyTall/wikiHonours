@@ -256,6 +256,8 @@ awardWPPropState <- ggplot(pagePropState, aes(reorder(awardComb, n), n, fill=wik
 ggplotly(awardWPPropState, tooltip="n")
 
 
+
+
 ```
 
 #### What can we learn about the page creation date of those who have a wikipedia page?
@@ -313,6 +315,40 @@ cumulativePlot <- ggplot(cumulative, aes(pageCreation, cumulate) )+
 
 ggplotly(cumulativePlot, tooltip = "cumulate")
 
+
+
+prePostGender <- allDataBig %>%
+  filter(wikipediaPage=="Yes") %>% 
+  filter(prePost!="No wiki") %>% 
+  select(prePost, gender) %>% 
+  group_by(prePost, gender) %>% 
+  tally()
+
+awardprePostGender <- ggplot(prePostGender, aes(prePost, n)) +
+  geom_col(aes(fill=gender)) +
+  custom_theme +
+  labs(title="Number of pages created pre / post award", 
+       y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued") +
+  scale_fill_manual(values=colours)
+
+ggplotly(awardprePostGender, tooltip = "n")
+
+
+cumulativeGender <- allDataBig %>% 
+  filter(wikipediaPage == "Yes") %>% 
+  select(pageCreation, wikipediaPage, gender) %>% 
+  group_by(gender, pageCreation) %>% 
+  arrange(pageCreation) %>% 
+  tally() %>% 
+  mutate(n= as.numeric(n)) %>% 
+  mutate(cumulate = cumsum(n))
+   
+cumulativePlotGender <- ggplot(cumulativeGender, aes(pageCreation, cumulate) )+
+  geom_line(aes(colour=gender))+
+  custom_theme +
+  scale_fill_manual(values=colours)
+
+ggplotly(cumulativePlotGender, tooltip = "cumulate")
 
 
 ```
