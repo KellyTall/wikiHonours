@@ -48,8 +48,8 @@ OAList <- read_csv("OAList.csv")
 allWP <- read_csv("allWP.csv")
 
 
-##all data matched together
-allData <- read_csv("allData.csv")
+##all data matched together- all updated as of 8th September
+allDataBig <- read_csv("allDataBig.csv")
 
 
 # load data ---------------------------------------------------------------
@@ -77,9 +77,9 @@ wikipediaMatch <- read_csv("wikipediaMatch.csv")
 
 pageCreation <- read_csv("pageCreation.csv")
   
-##all data merge as of 19 August
 
-allData <- read_csv("allData.csv")
+
+
 
 ```
 
@@ -152,19 +152,19 @@ custom_theme <-  theme(
 
 
 
-awardSummaryTotal <- allData %>%
-        select(award) %>%
-        group_by(award) %>%
+awardSummaryTotal <- allDataBig %>%
+        select(awardComb) %>%
+        group_by(awardComb) %>%
         tally()
 
-awardSummaryState <- allData %>%
-        select(award, state) %>%
-        group_by(state, award ) %>%
+awardSummaryState <- allDataBig %>%
+        select(awardComb, state) %>%
+        group_by(state, awardComb) %>%
         tally()
 # 
 
 
-awardTotal <-  ggplot(awardSummaryTotal, aes(reorder(award, -n), n))+
+awardTotal <-  ggplot(awardSummaryTotal, aes(reorder(awardComb, -n), n))+
   geom_col(fill="#2d4059") +
   custom_theme+
   labs(title="Number of award recipients by level of membership",
@@ -172,7 +172,7 @@ awardTotal <-  ggplot(awardSummaryTotal, aes(reorder(award, -n), n))+
 
 ggplotly(awardTotal, tooltip="n")
 
-awardState <- ggplot(awardSummaryState, aes(reorder(award, -n), n))+
+awardState <- ggplot(awardSummaryState, aes(reorder(awardComb, -n), n))+
   geom_col(fill="#2d4059") +
   facet_wrap(~state)+
   custom_theme+
@@ -196,20 +196,20 @@ ggplotly(awardState, tooltip = "n")
 
 ```{r echo=FALSE, message=FALSE}
 
-pagePropTotal <- allData %>% 
-        select(award, wpPage) %>% 
-        group_by(award, wpPage) %>% 
+pagePropTotal <- allDataBig %>% 
+        select(awardComb, wikipediaPage) %>% 
+        group_by(awardComb, wikipediaPage) %>% 
         tally()
 
-pagePropState <- allData %>% 
-        select(award, wpPage, state) %>% 
-        group_by(award, wpPage, state) %>% 
+pagePropState <- allDataBig %>% 
+        select(awardComb, wikipediaPage, state) %>% 
+        group_by(awardComb, wikipediaPage, state) %>% 
         tally()
 
 
 
-awardWPNum <- ggplot(pagePropTotal, aes(reorder(award, -n), n)) +
-  geom_col(aes(fill=wpPage)) +
+awardWPNum <- ggplot(pagePropTotal, aes(reorder(awardComb, -n), n)) +
+  geom_col(aes(fill=wikipediaPage)) +
   custom_theme+
   labs(title="Number of award recipients that have a wikipedia article page", 
        x="Order of Australia (membership levels)", y="number of awards") +
@@ -220,8 +220,8 @@ awardWPNum <- ggplot(pagePropTotal, aes(reorder(award, -n), n)) +
 ggplotly(awardWPNum, tooltip = "n")
 
 
-awardWPNumState <- ggplot(pagePropState, aes(reorder(award, -n), n)) +
-  geom_col(aes(fill=wpPage)) +
+awardWPNumState <- ggplot(pagePropState, aes(reorder(awardComb, -n), n)) +
+  geom_col(aes(fill=wikipediaPage)) +
   facet_wrap(~state)+
   custom_theme+
   labs(title="Number of award recipients that have a wikipedia article page by state", 
@@ -232,7 +232,7 @@ awardWPNumState <- ggplot(pagePropState, aes(reorder(award, -n), n)) +
 
 ggplotly(awardWPNumState, tooltip = "n")
 
-awardWPProp <- ggplot(pagePropTotal, aes(reorder(award, -n), n, fill=wpPage)) +
+awardWPProp <- ggplot(pagePropTotal, aes(reorder(awardComb, -n), n, fill=wikipediaPage)) +
   geom_bar(position="fill", stat="identity") +
   custom_theme+
   labs(title="Proportion of award recipients that have a wikipedia article page", 
@@ -243,7 +243,7 @@ awardWPProp <- ggplot(pagePropTotal, aes(reorder(award, -n), n, fill=wpPage)) +
         
 ggplotly(awardWPProp, tooltip="n")
 
-awardWPPropState <- ggplot(pagePropState, aes(reorder(award, n), n, fill=wpPage)) +
+awardWPPropState <- ggplot(pagePropState, aes(reorder(awardComb, n), n, fill=wikipediaPage)) +
         geom_bar(position="fill", stat="identity") +
         facet_wrap(~state)+
         custom_theme+
@@ -269,23 +269,51 @@ ggplotly(awardWPPropState, tooltip="n")
 
 
 ```{r echo=FALSE, message=FALSE}
-prePost <- allData %>%
-  filter(wpPage=="Yes") %>% 
+prePost <- allDataBig %>%
+  filter(wikipediaPage=="Yes") %>% 
   filter(prePost!="No wiki") %>% 
   select(prePost) %>% 
   group_by(prePost) %>% 
   tally()
 
 awardprePost <- ggplot(prePost, aes(prePost, n)) +
-  geom_col() +
-  custom_theme+
-  labs(title="Number of pages crated pre / post award", 
-       y="number of wikiPedia Articles") +
+  geom_col(fill="#2d4059") +
+  custom_theme +
+  labs(title="Number of pages created pre / post award", 
+       y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued") +
   scale_fill_manual(values=colours)
   
   
 
 ggplotly(awardprePost, tooltip = "n")
+
+timeline <- allDataBig %>% 
+  filter(wikipediaPage == "Yes") %>% 
+  select(pageCreation, wikipediaPage) %>% 
+  group_by(pageCreation, wikipediaPage) %>% 
+  tally()
+
+
+timelinePlot <- ggplot(timeline, aes(pageCreation, n)) +
+  geom_line()
+
+ggplotly(timelinePlot, tooltip = "n")
+
+cumulative <- allDataBig %>% 
+  filter(wikipediaPage == "Yes") %>% 
+  select(pageCreation, wikipediaPage) %>% 
+  group_by(pageCreation) %>% 
+  arrange(pageCreation) %>% 
+  tally() %>% 
+  mutate(n= as.numeric(n)) %>% 
+  mutate(cumulate = cumsum(n))
+   
+cumulativePlot <- ggplot(cumulative, aes(pageCreation, cumulate) )+
+  geom_line()
+
+ggplotly(cumulativePlot, tooltip = "cumulate")
+
+
 
 ```
 
@@ -302,7 +330,7 @@ ggplotly(awardprePost, tooltip = "n")
 <br>
 * How to handle peopel with multiple awards - multiple honour dates to single page creation date
 <br>
-* Need to find the entry of the nursing accadmic who is referenced in wikipedia page, but has no page of her own / has a wikidata entry (create list of these poeple to have a look and see who they are)
+* Need to find the entry of the nursing accadmic who is referenced in wikipedia page, but has no page of her own / has a wikidata entry (create list of these poeple to have a look and see who they are) (think this is it: https://www.wikidata.org/wiki/Q47193440 - no page but she is refernced here: https://en.wikipedia.org/wiki/Amorality | megan jane JOhnson)
 <br> 
 * I think I found a few folks that had non eng wikipedia pages (think one was the Producer of shine? - need to check) Is this of interest? Possibly only a v small number. Could scrape the non english pages to see where they have page. (Also - what Australian's in general have been given page in other languages?)
 <br> 
@@ -440,7 +468,7 @@ Cases were merged using the following method:
 The variables included on the full data set are:
 ```{r echo=FALSE}
 
-colnames(allData)
+colnames(allDataBig)
 
 ```
 
