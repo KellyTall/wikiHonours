@@ -429,19 +429,19 @@ arcData <- smallData %>%
 arcPlot <- tbl_graph(edges=arcData, directed=TRUE)
 
 
-arcGender <- ggraph(arcPlot, layout = 'linear') +
+ggraph(arcPlot, layout = 'linear') +
         geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) 
 
-arcAward <- ggraph(arcPlot, layout = 'linear') +
+ggraph(arcPlot, layout = 'linear') +
         geom_edge_arc(aes(colour=awardComb), alpha=.3, width=.2) 
 
         
 
-arcGenderSplit <- ggraph(arcPlot, layout = 'linear') +
+ggraph(arcPlot, layout = 'linear') +
         geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
         facet_wrap(~gender)
 
-arcAwardSplitSplit <- ggraph(arcPlot, layout = 'linear') +
+ggraph(arcPlot, layout = 'linear') +
         geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
         facet_grid(~awardComb)
 
