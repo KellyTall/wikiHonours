@@ -13,7 +13,8 @@ output:
         html_document:
                 df_print: paged  
                 toc: true
-                toc_float: true      
+                toc_float: true     
+                fig_caption: true 
 ---
 
 ```{r setup, include=FALSE}
@@ -39,19 +40,86 @@ library(tidygraph)
 
 # all data matched together- all updated as of 8th September
 
-allDataBig <- read_csv("allDataBig.csv") %>% 
+allData <- read_csv("allDataBig.csv") %>% 
         select(-X1) %>% 
         mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
         mutate(awardComb = factor(awardComb, levels = c("ADK", "AC", "AO", "AM", "OAM"))) %>% 
         mutate (honourYear = year(honourDate),
                 pageYear = year(pageCreation))
 
+##reoving anon recipients
+allDataAnonRemoved <- allData %>% 
+  filter(fullName !="Anonymous") 
 
-##filtered data ste nly including cases w wikipedia pages plus deleting duplicates
-smallData <- allDataBig %>% 
+        
+##tallying those with multiple awards
+multipleHonoursList <- allDataAnonRemoved %>% 
+        mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
+        arrange(name, dateAwarded) %>% 
+        group_by(name) %>% 
+        tally() %>% 
+        filter(n>1) 
+
+##use this data set to look just at recipients of honours - mutiple honours removed. Keeps oldest date for first award, and honour for most recent award
+
+recipientData <- allDataAnonRemoved %>% 
+        mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
+        arrange(name, dateAwarded) %>% 
+        # filter(wikipediaPage =="Yes") %>% 
+        # select(name, dateAwarded, pageCreation, AwardAbbr, daysDiff) %>%
+        group_by(name) %>% 
+        add_tally() %>% 
+        # filter(n>1) %>%
+        mutate(firstAwardDate = min(dateAwarded)) %>% 
+        mutate(highestAward1 = case_when(awardComb == "OAM" ~1,
+                                        awardComb == "AM" ~2,
+                                        awardComb == "AO" ~3,
+                                        awardComb == "AC" ~4,
+                                        awardComb == "AKD" ~5)) %>% 
+        mutate(highestAward2 = max(highestAward1)) %>% 
+        mutate(highestAward = case_when(highestAward2 == 1 ~"OAM",
+                                        highestAward2 == 2 ~"AM" ,
+                                        highestAward2 == 3~"AO",
+                                        highestAward2 == 4~"AC",
+                                        highestAward2 == 5 ~"AKD")) %>% 
+        filter(highestAward1 == max(highestAward1)) %>% 
+        mutate(daysDiff = pageCreation - firstAwardDate) %>% 
+        mutate(daysDiff = str_remove(daysDiff, "days")) %>% 
+        mutate(daysDiff = as.numeric(daysDiff)) %>% 
+        select(wikipediaPage:pageCreation, firstAwardDate, daysDiff:highestAward) %>% 
+        mutate(honourYear = year(firstAwardDate)) %>% 
+        mutate(pageYear = year(pageCreation)) %>% 
+        mutate(prePost = case_when(daysDiff >=0 ~ "Post",
+                                   daysDiff < 0 ~ "Pre")) %>% 
+        select(wikipediaPage:prePost, honourYear, pageYear, AwardAbbr:highestAward) %>% 
+  ungroup()
+
+
+
+
+##all those with WP article - based on recipients / not honours
+
+wpData <- recipientData %>% 
         filter(wikipediaPage=="Yes" & prePost!="No wiki") %>% 
-        filter(fullName !="Anonymous") %>% 
-        distinct(wikipediaURL, .keep_all = TRUE)
+        distinct(wikipediaURL, .keep_all = TRUE) %>% 
+        mutate(name = ifelse(!is.na(name), name, fullName)) 
+
+
+
+##chart formats
+
+colours <- c("#2d4059", "#ea5455")
+
+coloursGender <- c("sienna3", "turquoise4")
+
+custom_theme <-  theme(
+                        panel.grid.major.x = element_line(colour = "lightgrey", size=0.25),
+                        # panel.background = element_rect(fill=("#e5e5e5")),
+                        panel.background = element_blank(),
+                        strip.background = element_blank(),
+                        axis.ticks = element_line(colour = "lightgrey", size = 0.25),
+                        # axis.line.x = element_line(colour = "lightgrey", size=0.25),
+                        axis.line.x = element_blank())
 
 
 
@@ -77,126 +145,259 @@ Order of Australia Awards issued since 1975, and has the following levels:
 
 More information about the Order of Australia can be found here: https://en.wikipedia.org/wiki/Order_of_Australia.
 
-Awards are issued with the following distinctions:
+Awards are issued with the following divisions:
 
 1. General (G): awarded to Australian Citizens 
 2. Military (M): warded to Australian Military
-3. Honourary: General and Militrya awards can also be issued to non-citizens as honourary awards. In XXXX a new distinction was created to honour permanent-residents. these used to be issued as HG, but are now issues as HP.
+3. Honourary: General (HG) and Military (HM) awards can also be issued to non-citizens as honourary awards. A new distinction was created recently to honour permanent-residents. These used to be indicated as "HG", but are now indicated by "HP".
 
-People can receive multiple Order of Australia honours in their lifetime. People can have their awards terminated, or  return or refused their awards.  Some awards are recorded as anonymous.
+People can receive multiple Order of Australia honours in their lifetime. People can have their awards terminated, or return or refused their awards.  Some awards are recorded as anonymous.
 
 ## Overview of Datasets and their prepararion
 
 There are two main sources for the data:
 
-1. The Australian Honours list that is sourced from the office of PM and Cabinet
+1. <b>The Order of Australia list</b> that is maintained by the office of Prime Minister and Cabinet and found here: https://honours.pmc.gov.au/honours/search
 
-2. Wikipedia articles linked to Order of Australia recipients and their creation date
+2. <b>Wikipedia articles</b> linked to Order of Australia recipients and their creation date
 
-### Australian Honours List
+### Order of Australia Honours List data set overview
 
-This data set consists of `r nrow(allDataBig)` records, where each record is an Order of Australia honour associated with an individual. 
+This data set consists of `r nrow(allData)` records, where each record is an Order of Australia honour associated with an individual. 
 
-The data set is sourced from the Office of the Prime Minister and Cabinet. In adddition to this data set there has been a clumn added for gender. At this stage a recipeients gender is limited to Male v Female, although we are aware that there have been trasgender recipeints of the award. Please see detail below on how this variable was constructued, and other relevant information
+The data set is sourced from the Office of the Prime Minister and Cabinet. In adddition to this data set there has been a column added for male. The recipients gender is indicated as male, female or unknown. Please see detail below on how this variable was constructued, and other relevant information
 
-(ADD IN SECTION BELOW ON HOW ALEX CREATED THIS VARIABLE, PLUS HIS NOTES ON TRANSGENDER RECIPIENTS AND HOW THEY HAVE BEEN RECORDED)
+<b>(ADD IN SECTION BELOW ON HOW ALEX CREATED THIS VARIABLE, PLUS HIS NOTES ON TRANSGENDER RECIPIENTS AND HOW THEY HAVE BEEN RECORDED)</b>
 
 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 
-multipleNumber <- allDataBig %>% 
-        select(name2) %>% 
-        group_by(name2) %>% 
-        tally() %>% 
-          filter(n>1) %>% 
-  nrow()
+anon_num <- allData %>% 
+        select(fullName, division) %>% 
+        filter(fullName == "Anonymous") 
 
 
-
-anonAawrds <- allDataBig %>% 
-  filter(fullName!="Anonymous")
-
-multipleRecords <- allDataBig %>% 
-  filter(fullName!="Anonymous") %>% 
-        select(fullName) %>% 
-        group_by(fullName) %>% 
-        tally() %>% 
-        filter(n>1)
-
-multipleWP <- allDataBig %>% 
-        select(wikipediaURL) %>% 
-        group_by(wikipediaURL) %>% 
-        tally() %>% 
-        filter(n>1) %>% 
-  nrow()
-
-diff <- multipleNumber - multipleWP
 
 ```
 
+
 The following characteristics of the data set need to be taken into consideration in analysis.
 
-1. Anonymous Awards
+#### 1. Anonymous Awards
+
+Of the `r nrow(allData)` total honours issued, there are `r nrow(anon_num)`  honours have been issued to "anonymous" recipients. 
+
+It is difficult to work out which anonymous honours are genuinely awarded anonymously, and which honours have been returned or removed.
+
+Some of these listed as anononymous have handed their honour back after receiving, or have had teir honour removed. These recipients have been excluded from the analysis. Please note that some of these people will have a wikipedia page, as they include both emminent (ie: <a href="https://en.wikipedia.org/wiki/Patrick_White">Patrick White</a>) and infamous (ie: <a href="https://en.wikipedia.org/wiki/Brian_Burke_(Australian_politician">Brian Bourke </a>) Australians. 
+
+A breakdown of the division and the award level of anonymous awards is included below. (NA indicates a division is not availble for that honour record)
+
+```{r eval=TRUE, echo=FALSE, fig.width=1}
+
+anonTotal <- allData %>% 
+        select(fullName, division) %>% 
+        filter(fullName == "Anonymous") %>% 
+        group_by(division) %>% 
+        tally() %>% 
+        rename(Total = n)
+
+anonTotal
+
+anonByAwardType <- allData %>% 
+        select(fullName, AwardAbbr) %>% 
+        filter(fullName == "Anonymous") %>% 
+        group_by(AwardAbbr) %>% 
+        tally() %>% 
+        rename(Total = n) %>% 
+  ungroup()
+
+anonByAwardType
+```
+
+Removing all anonymous Honours recipients leaves us with `r nrow(allDataAnonRemoved)` honours. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+multipleHonours <- allDataAnonRemoved %>% 
+        select(wikipediaURL, name2) %>% 
+        group_by(name2) %>% 
+        tally() %>% 
+        filter(n>1) %>% 
+  ungroup()
 
 
 
-2. Multiple Awards
 
-Of the `r nrow(allDataBig)` records, there are a small number of records `r nrow(multipleRecords)` records associated with the same person. 
+```
 
+#### 2. Multiple Awards
 
-3. Terminated awards
+Of the `r nrow(allDataAnonRemoved)` records, there are `r nrow(multipleHonours)` records associated with the same person. These are people who have been awarded more than one Honour. As part of the anlaysis is to understand the difference between award date and page creation, the date of the <b>first honour awarded to an individual</b> is used, not the date of the most recent honour. The level allocated to that individual is their most recent honour. So when looking at honours, we show an individuals most recent honour. When we look at honour issue date, we look at the first honour they have received. 
 
-
-4. Type of awards (honourary etc)
-  
+To make it clear for the reader, please refer to the chart footer. "All Honours" refers to <i>honours</i> issued, noting that an individual can hold multiple homours.  "All Recipients" refers to the <i>individuals</i> receiving awards.
 
 
-### Wikipedia Data Outline
+#### 3. Honour Divisions 
+
+As outlined above, awards are issued under different Divisions. The General and Military division are awarded to Australian citizens. "Honorary" are awarded to non-citizens and "HP" are awarded to Australian permanent residents.
+
+There are some "Honorary" awards where we can assume that an individual would have had a wikipedia article created for them with or without the individual receiving an Order of Australia. For example, Jacques Cousteau, Jerry Lewis, or Mother Theresa. There are some people though who have received honary awards whose "emminence" is linked to Australia, such as Jill Kerr, Joern Utzon and Googie Withers, and who have a wikipedia article. The Duke of Edinbourough and Prince Charles both are Knights of the Order of Australia, but these awards are not issued with an honourary division. We can assume that these recipients would have wikipedia pages without receiving these honours.
+
+
+A breakdown of the honours by the divisions is shown below with the size of the circle representing the number of honours issued to each category. Compared to the General Division, the Honourary Divisions are a small, but this needs to be taken into account when interpreting the results
+
+<div style="margin-bottom:100px;">
+
+```{r HonourDivisionSummary, echo=FALSE, message=FALSE, warning=FALSE}
+
+awardSummaryDivisionTally <- allDataAnonRemoved %>%
+        select(awardComb, division) %>%
+        group_by(awardComb, division) %>%
+        tally() %>% 
+  ungroup()
+
+ divisionSummary <- ggplot(awardSummaryDivisionTally, aes(division, awardComb, size=n)) +
+        geom_point(color="#515BA5") +
+        scale_x_discrete(position = "top") +
+        scale_size(range = c (1, 20))+
+   labs(title="Division breakdown by Honour level",
+       x="Honour Division", y="Honour Level") 
+   
+        
+
+
+t <- list(
+        family = "Helvetica",
+        size = 14)
+
+ggplotly(divisionSummary, tooltip="n") %>% 
+        layout(height=460, font=t,
+               annotations = 
+                       list(x = 1, y = -0.1, text = "All Honours n=41,682. Last column are records with no Division indicated", 
+                            showarrow = F, xref='paper', yref='paper', 
+                            xanchor='right', yanchor='auto', xshift=1, yshift=5,
+                            font=list(size=10)))  
+
+```
+
+</div>
+### Wikipedia Article and Page Creation date dataset overview
 
 TO COME
 
-## Analysis
+## Analysis  
+
+
+
+### Number of Honours awarded 
+
+<div style="margin-bottom:100px;">
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
-##chart formats
 
-colours <- c("#2d4059", "#ea5455")
-
-custom_theme <-  theme(
-                        panel.grid.major.x = element_blank(),
-                        panel.background = element_rect(fill=("#e5e5e5")),
-                        strip.background = element_blank())
-
-
-
-awardSummaryTotal <- allDataBig %>%
+awardSummaryTotal <- allDataAnonRemoved %>%
         select(awardComb) %>%
         group_by(awardComb) %>%
         tally()
 
-awardSummaryState <- allDataBig %>%
+awardSummaryState <- allDataAnonRemoved %>%
         select(awardComb, state) %>%
         group_by(state, awardComb) %>%
         tally()
-#
 
+awardSummaryTotalWikiFilterNumber <- allDataAnonRemoved %>%
+        select(honourYear, awardComb) %>%
+    filter(honourYear >2000)
+
+```
+
+</div>
+
+
+
+<div style="margin-bottom:100px;">
+Since 2001 there has been `r nrow(awardSummaryTotalWikiFilterNumber)` Orders of Australia awarded.
+
+```{r honourTotals, echo=FALSE, message=FALSE, warning=FALSE}
 
 awardTotal <- ggplot(awardSummaryTotal, aes(awardComb, n)) +
-        geom_col(fill="#2d4059") +
-        custom_theme+
-        labs(title="All Orders of Australia issued (1975 - 2020)",
-             x="Order of Australia (membership levels)", y="number of awards", 
-             caption="total number of awards n=41,816") +
-        scale_fill_manual(values=colours)+
-  coord_flip()
+  geom_col(fill="#2d4059") +
+  custom_theme+
+  # geom_text(aes(label = n, hjust=-.1))+
+  labs(title="All Orders of Australia awarded (1975 - 2020)",
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_fill_manual(values=colours)+
+  coord_flip()+
+  scale_y_continuous(limits = c(0, 27500), breaks = c(5000, 15000, 25000) )
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+ggplotly(awardTotal, tooltip="n") %>% 
+       layout(font=t,
+         annotations = 
+ list(x = 1, y = -0.1, text = "All Honours n=41,682", 
+      showarrow = F, xref='paper', yref='paper', 
+      xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+      font=list(size=10))) 
 
 
-ggplotly(awardTotal, tooltip="n")
 
-awardSummaryState <- allDataBig %>%
+
+
+
+```
+</div>
+
+
+
+
+<div style="margin: 20px 0 100px 0;">
+```{r honourNumberWikipediaYears, echo=FALSE, message=FALSE, warning=FALSE}
+
+awardSummaryTotalWikiFilter <- allDataAnonRemoved %>%
+        select(honourYear, awardComb) %>%
+    filter(honourYear >2000) %>% 
+        group_by(awardComb) %>%
+        tally()
+
+
+
+awardTotalWikiYearFilter <- ggplot(awardSummaryTotalWikiFilter, aes(awardComb, n)) +
+  geom_col(fill="#2d4059") +
+  custom_theme+
+  # geom_text(aes(label = n, hjust=-.1))+
+  labs(title="All Orders of Australia awarded (2001 - 2020)",
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_fill_manual(values=colours)+
+  coord_flip()+
+  scale_y_continuous(limits = c(0, 18000), breaks = c(5000, 10000, 15000) )
+
+# t <- list(
+#   family = "Helvetica",
+#   size = 14)
+# 
+# ggplotly(awardTotalWikiYearFilter, tooltip="n") %>% 
+#        layout(font=t,
+#          annotations = 
+#  list(x = 1, y = -0.1, text = "All Honours awarded since 2001 n=24,997", 
+#       showarrow = F, xref='paper', yref='paper', 
+#       xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+#       font=list(size=10))) 
+```
+
+</div>
+
+### Number of Honours awarded by state
+
+<div style="margin: 20px 0 100px 0;">
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+awardSummaryState <- allDataAnonRemoved %>%
         group_by(state) %>% 
         add_tally() %>% 
         rename(stateAwardTotal = n) %>% 
@@ -212,73 +413,159 @@ awardSummaryState <- allDataBig %>%
 awardState <- ggplot(awardSummaryState, aes(reorder(awardComb, n), n))+
         geom_col(fill="#2d4059") +
         facet_wrap(~chartLabel)+
+  # geom_text(aes(label=n), size=2, hjust=-.1)+
         custom_theme+
-        labs(title="Number of award recipients by level of membership by state",
-             x="Order of Australia (membership levels)", y="Number of Honours", 
-             caption = "'Other' refers to honourary awards, and/or those not residing in Australia, 
-             or where there was no location information provided in the record. Total number of honours n=41,816") +
+        labs(title="Number of honours by level of membership by state",
+             x="Order of Australia (levels)", y="Number of Honours")+ 
         coord_flip()+
         # geom_text(aes(label=n), hjust=-.3, size=3) +
-        scale_y_continuous(limits = c(0, 10100))
+        scale_y_continuous(limits = c(0, 10100), n.breaks=3)
 
+# t <- list(
+#   family = "Helvetica",
+#   size = 12)
+# 
+# 
+# ggplotly(awardState, tooltip = "n") %>% 
+#        layout(font=t,
+#          annotations = 
+#  list(x = 1, y = -0.1, text = "All Honours by State n=41,682. 'Other' refers to honourary awards, and/or those not residing in Australia, 
+#              or where there was no location information provided in the record.", 
+#       showarrow = F, xref='paper', yref='paper', 
+#       xanchor='right', yanchor='auto', xshift=1, yshift=-4,
+#       font=list(size=8))) 
 
-ggplotly(awardState, tooltip = "n")
 
 
 
 
 ```
+</div>
+
+<div style="margin: 20px 0 100px 0;">
+
+### Number of Recipients with Wikipedia Page articles
 
 ```{r echo=FALSE, message=FALSE}
 
-pagePropTotal <- allDataBig %>%
+pagePropTotal <-  recipientData%>%
         select(awardComb, wikipediaPage) %>%
         group_by(awardComb, wikipediaPage) %>%
         tally()
 
-pagePropState <- allDataBig %>%
-        select(awardComb, wikipediaPage, state) %>%
-        group_by(awardComb, wikipediaPage, state) %>%
+
+pagePropTotalWP <-  recipientData%>%
+  filter(honourYear >2000) %>% 
+        select(awardComb, wikipediaPage) %>%
+        group_by(awardComb, wikipediaPage) %>%
         tally()
 
 
 
-awardWPNum <- ggplot(pagePropTotal, aes(reorder(awardComb, -n), n)) +
+pagePropTotalWP <-  recipientData%>%
+  filter(honourYear >2000) %>% 
+        select(awardComb, wikipediaPage) %>%
+        group_by(awardComb, wikipediaPage) %>%
+        tally()
+
+awardWPNum <- ggplot(pagePropTotal, aes(awardComb,n)) +
   geom_col(aes(fill=wikipediaPage)) +
   custom_theme+
-  labs(title="Number of award recipients that have a wikipedia article page",
+  # geom_text(aes(label=n), size=2, hjust=.8)+
+  labs(title="Number of honour recipients that have a wikipedia article page, 1975 - 2020",
        x="Order of Australia (membership levels)", y="number of awards") +
-  scale_fill_manual(values=colours)
+  scale_fill_manual(values=colours) +
+  coord_flip()
+
+ggplotly(awardWPNum, tooltip = "n") 
+
+awardWPNum <- ggplot(pagePropTotalWP, aes(awardComb,n)) +
+  geom_col(aes(fill=wikipediaPage)) +
+  custom_theme+
+  # geom_text(aes(label=n), size=2, hjust=.8)+
+  labs(title="Number of honour recipients that have a wikipedia article page, 2001 - 2020",
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_fill_manual(values=colours) +
+  coord_flip()
+
+ggplotly(awardWPNum, tooltip = "n") 
 
 
+```
 
-ggplotly(awardWPNum, tooltip = "n")
+</div>
 
 
-awardWPNumState <- ggplot(pagePropState, aes(reorder(awardComb, -n), n)) +
+<div style="margin-bottom:100px;">
+
+### Number of Recipients with Wikipedia Page articles by state
+
+```{r echo=FALSE, message=FALSE}
+
+pagePropState <- recipientData %>%
+        select(awardComb, wikipediaPage, state) %>%
+        group_by(awardComb, wikipediaPage, state) %>%
+        tally()
+  
+
+awardWPNumState <- ggplot(pagePropState, aes(awardComb, n)) +
   geom_col(aes(fill=wikipediaPage)) +
   facet_wrap(~state)+
   custom_theme+
   labs(title="Number of award recipients that have a wikipedia article page by state",
        x="Order of Australia (membership levels)", y="number of awards")+
-  scale_fill_manual(values=colours)
+  scale_fill_manual(values=colours)+
+  coord_flip()
 
 
 
 ggplotly(awardWPNumState, tooltip = "n")
+   # layout(font=t,
+   #       annotations = 
+   #        list(x = 1, y = -0.1, text = "All Recipients n=41,314", 
+   #    showarrow = F, xref='paper', yref='paper', 
+   #    xanchor='right', yanchor='auto', xshift=1, yshift=-4,
+   #    font=list(size=10))) 
 
-awardWPProp <- ggplot(pagePropTotal, aes(reorder(awardComb, -n), n, fill=wikipediaPage)) +
+```
+
+<div style="margin-bottom:100px;">
+
+### Proportion of Recipients with Wikipedia Page articles 
+
+```{r awardPropTotal, echo=FALSE, message=FALSE}
+awardPropTotal <- ggplot(pagePropTotal, aes(reorder(awardComb, -n), n, fill=wikipediaPage)) +
   geom_bar(position="fill", stat="identity") +
   custom_theme+
-  labs(title="Proportion of award recipients that have a wikipedia article page",
+  labs(title="Proportion of award recipients that have a wikipedia article page 1975 - 2020",
        x="Order of Australia (membership levels)", y="number of awards") +
   scale_y_continuous(labels = percent)+
   scale_fill_manual(values=colours)
 
+ggplotly(awardPropTotal, tooltip="n") 
 
-ggplotly(awardWPProp, tooltip="n")
+awardPropTotal <- ggplot(pagePropTotalWP, aes(reorder(awardComb, -n), n, fill=wikipediaPage)) +
+  geom_bar(position="fill", stat="identity") +
+  custom_theme+
+  labs(title="Proportion of award recipients that have a wikipedia article page 2001 - 2020",
+       x="Order of Australia (membership levels)", y="number of awards") +
+  scale_y_continuous(labels = percent)+
+  scale_fill_manual(values=colours)
 
-awardWPPropState <- ggplot(pagePropState, aes(reorder(awardComb, n), n, fill=wikipediaPage)) +
+ggplotly(awardPropTotal, tooltip="n") 
+   
+
+```
+
+Note: only slight differences in proprtions when looking at all honours v honours issued since 2001 
+
+</div>
+
+### Proportion of Recipients with Wikipedia Page articles by state
+```{r echo=FALSE, message=FALSE}
+
+
+ggplot(pagePropState, aes(reorder(awardComb, n), n, fill=wikipediaPage)) +
         geom_bar(position="fill", stat="identity") +
         facet_wrap(~state)+
         custom_theme+
@@ -295,16 +582,26 @@ ggplotly(awardWPPropState, tooltip="n")
 
 ```
 
-
+### Page creation pre and post award
 
 
 ```{r echo=FALSE, message=FALSE}
-prePost <- allDataBig %>%
+prePost <- recipientData %>%
   filter(wikipediaPage=="Yes") %>%
   filter(prePost!="No wiki") %>%
   select(prePost) %>%
   group_by(prePost) %>%
   tally()
+
+
+prePostWP <- recipientData %>%
+  filter(honourYear>2000) %>% 
+  filter(wikipediaPage=="Yes") %>%
+  filter(prePost!="No wiki") %>%
+  select(prePost) %>%
+  group_by(prePost) %>%
+  tally()
+
 
 awardprePost <- ggplot(prePost, aes(prePost, n)) +
   geom_col(fill="#2d4059") +
@@ -314,23 +611,65 @@ awardprePost <- ggplot(prePost, aes(prePost, n)) +
   scale_fill_manual(values=colours)
 
 
+awardprePostWP <- ggplot(prePostWP, aes(prePost, n)) +
+  geom_col(fill="#2d4059") +
+  custom_theme +
+  labs(title="Number of pages created pre / post award",
+       y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued") +
+  scale_fill_manual(values=colours)
+
+
 
 ggplotly(awardprePost, tooltip = "n")
+ggplotly(awardprePostWP, tooltip = "n")
+```
 
-timeline <- allDataBig %>%
+### Number of Pages created over time
+
+```{r echo=FALSE, message=FALSE}
+
+timeline <- recipientData %>% 
   filter(wikipediaPage == "Yes") %>%
   select(pageCreation, wikipediaPage) %>%
   group_by(pageCreation, wikipediaPage) %>%
   tally()
 
 
+timelineYear <- recipientData %>% 
+  filter(wikipediaPage == "Yes") %>%
+  select(pageYear, wikipediaPage) %>%
+  group_by(pageYear, wikipediaPage) %>%
+  tally()
+
+
 timelinePlot <- ggplot(timeline, aes(pageCreation, n)) +
-  geom_line() +
-  geom_smooth()
+  geom_line(colour="#2d4059") +
+  custom_theme+
+  geom_smooth()+
+  labs(title="Number of pages created by day",
+       y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued")
 
 ggplotly(timelinePlot, tooltip = "n")
 
-cumulative <- allDataBig %>%
+
+timelinePlot2 <- ggplot(timelineYear, aes(pageYear, n)) +
+  geom_line(colour="#2d4059") +
+  custom_theme+
+  # geom_smooth()+
+  labs(title="Number of pages created by Year",
+       y="number of wikiPedia Articles", x= "page creation year", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued")
+
+ggplotly(timelinePlot2, tooltip = "n")
+
+
+
+```
+
+
+### Cumulative Pages over time
+
+```{r echo=FALSE, message=FALSE}
+cumulative <- recipientData %>%
   filter(wikipediaPage == "Yes") %>%
   select(pageCreation, wikipediaPage) %>%
   group_by(pageCreation) %>%
@@ -340,13 +679,38 @@ cumulative <- allDataBig %>%
   mutate(cumulate = cumsum(n))
 
 cumulativePlot <- ggplot(cumulative, aes(pageCreation, cumulate) )+
-  geom_line() 
+  # geom_smooth()+
+   geom_line(colour="#2d4059") +
+  custom_theme+
+  labs(title="Cumulative Pages created by Day",
+       y="number of wikiPedia Articles (cumulative)", x= "page creation year", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued")
 
 ggplotly(cumulativePlot, tooltip = "cumulate")
 
 
+cumulativeYear <- recipientData %>%
+  filter(wikipediaPage == "Yes") %>%
+  select(pageYear, wikipediaPage) %>%
+  group_by(pageYear) %>%
+  arrange(pageYear) %>%
+  tally() %>%
+  mutate(n= as.numeric(n)) %>%
+  mutate(cumulate = cumsum(n))
 
-prePostGender <- allDataBig %>%
+cumulativePlot <- ggplot(cumulativeYear, aes(pageYear, cumulate) )+
+  # geom_smooth()+
+   geom_line(colour="#2d4059") +
+  custom_theme+
+  labs(title="Cumulative Pages created by Year",
+       y="number of wikiPedia Articles (cumulative)", x= "page creation year", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued")
+
+ggplotly(cumulativePlot, tooltip = "cumulate")
+
+```
+
+```{r echo=FALSE, message=FALSE}
+
+prePostGender <- recipientData %>%
   filter(wikipediaPage=="Yes") %>%
   filter(prePost!="No wiki") %>%
   select(prePost, gender) %>%
@@ -358,12 +722,16 @@ awardprePostGender <- ggplot(prePostGender, aes(prePost, n)) +
   custom_theme +
   labs(title="Number of pages created pre / post award",
        y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued") +
-  scale_fill_manual(values=colours)
+  scale_fill_manual(values=coloursGender)
 
 ggplotly(awardprePostGender, tooltip = "n")
 
+```
 
-cumulativeGender <- allDataBig %>%
+
+```{r echo=FALSE, message=FALSE}
+
+cumulativeGender <- recipientData %>%
   filter(wikipediaPage == "Yes") %>%
   select(pageCreation, wikipediaPage, gender) %>%
   group_by(gender, pageCreation) %>%
@@ -373,49 +741,135 @@ cumulativeGender <- allDataBig %>%
   mutate(cumulate = cumsum(n))
 
 cumulativePlotGender <- ggplot(cumulativeGender, aes(pageCreation, cumulate) )+
+  geom_smooth()+
   geom_line(aes(colour=gender))+
   custom_theme +
-  scale_fill_manual(values=colours)
+  scale_colour_manual(values=coloursGender)
 
 ggplotly(cumulativePlotGender, tooltip = "cumulate")
+```
 
 
+```{r echo=FALSE, message=FALSE}
 ####  slope chart
 
-slopeData <- smallData %>% 
+slopeData <- wpData %>% 
         select(honourYear, pageYear, prePost, gender, awardComb)
 
-ggparcoord(slopeData, columns = 1:2, groupColumn="prePost", alphaLines = 0.04) 
+ggparcoord(slopeData, columns = 1:2, groupColumn="prePost", alphaLines = 0.04) +
+  custom_theme +
+  labs(title="Number of pages created pre / post award 1975 - 2020") +
+  scale_colour_manual(values=colours)
         
 ggparcoord(slopeData, columns = 1:2, groupColumn="prePost", alphaLines = 0.05) +
-        facet_wrap(~gender)
+        facet_wrap(~gender)+
+  custom_theme +
+  labs(title="Number of pages created pre / post award 1975 - 2020 by gender") +
+  scale_colour_manual(values=colours)
 
 ggparcoord(slopeData, columns = 1:2, groupColumn="prePost", alphaLines = 0.05) +
-        facet_wrap(~awardComb)
+        facet_wrap(~awardComb)+
+  custom_theme +
+  labs(title="Number of pages created pre / post award 1975 - 2020 by honour level") +
+  scale_colour_manual(values=colours)
 
 
 
-timeData <- smallData %>% 
+slopeDataWP <- wpData %>% 
+        select(honourYear, pageYear, prePost, gender, awardComb) %>% 
+  filter(honourYear >2000)
+
+
+ggparcoord(slopeDataWP, columns = 1:2, groupColumn="prePost", alphaLines = 0.04) +
+  custom_theme +
+  labs(title="Number of pages created pre / post award 2001- 2020") +
+  scale_colour_manual(values=colours)
+  
+        
+ggparcoord(slopeDataWP, columns = 1:2, groupColumn="prePost", alphaLines = 0.05) +
+        facet_wrap(~gender) +
+    custom_theme +
+  labs(title="Number of pages created pre / post award 2001- 2020 by gender") +
+  scale_colour_manual(values=colours)
+
+
+ggparcoord(slopeDataWP, columns = 1:2, groupColumn="prePost", alphaLines = 0.05) +
+        facet_wrap(~awardComb)+
+      custom_theme +
+  labs(title="Number of pages created pre / post award 2001- 2020 by honour level") +
+  scale_colour_manual(values=colours)
+
+```
+
+### Days 
+
+```{r echo=FALSE, message=FALSE}
+timeData <- wpData %>% 
         filter(wikipediaPage=="Yes" & prePost!="No wiki")  %>% 
         select(daysDiff, gender, awardComb) 
 
+
+timeDataWP <- wpData %>% 
+        filter(wikipediaPage=="Yes" & prePost!="No wiki")  %>% 
+  filter(honourYear>2000) %>% 
+        select(daysDiff, gender, awardComb) 
+
+
 ggplot(timeData, aes(daysDiff)) +
         geom_histogram(binwidth = 500) +
-        facet_grid(gender~awardComb) 
+  custom_theme +
+  labs(title="Days difference between Honour and page creation 1975 - 2020 ") +
+  scale_fill_manual(values=colours)
+  
+
+ggplot(timeDataWP, aes(daysDiff)) +
+        geom_histogram(binwidth = 500) +
+  custom_theme +
+  labs(title="Days difference between Honour and page creation 2001 - 2020 ") +
+  scale_fill_manual(values=colours)
+
+
+ggplot(timeData, aes(daysDiff)) +
+        geom_histogram(binwidth = 500) +
+        facet_grid(gender~awardComb)  +
+  custom_theme +
+  labs(title="Days difference between Honour and page creation 1975 - 2020 by Gender ") +
+  scale_fill_manual(values=colours)
+
+
+
+ggplot(timeDataWP, aes(daysDiff)) +
+        geom_histogram(binwidth = 500) +
+        facet_grid(gender~awardComb)  +
+  custom_theme +
+  labs(title="Days difference between Honour and page creation 2001 - 2020 by gender") +
+  scale_fill_manual(values=colours)
 
 
 
 ggplot(timeData, aes(daysDiff, after_stat(count), group=gender, fill=gender)) +
         geom_density(alpha=0.5)  +
-        facet_grid(~awardComb)
+        facet_grid(~awardComb) +
+    custom_theme +
+  labs(title="Days difference between Honour and page creation 1975 - 2020 by gender") +
+  scale_fill_manual(values=coloursGender)
+
+ggplot(timeDataWP, aes(daysDiff, after_stat(count), group=gender, fill=gender)) +
+        geom_density(alpha=0.5)  +
+        facet_grid(~awardComb) +
+    custom_theme +
+  labs(title="Days difference between Honour and page creation 2001 - 2020 by gender") +
+  scale_fill_manual(values=coloursGender)
+
+
 
 ```
 
-### arc plots
+### Arc plots 1975 - 2020
 
 ```{r echo=FALSE, message=FALSE, fig.width=12}
 
-arcData <- smallData %>% 
+arcData <- wpData %>% 
         select(honourDate, pageCreation, prePost, gender, awardComb) %>% 
         mutate (from = year(honourDate),
                 to = year(pageCreation)) %>% 
@@ -429,11 +883,15 @@ arcData <- smallData %>%
 arcPlot <- tbl_graph(edges=arcData, directed=TRUE)
 
 
+
+
 ggraph(arcPlot, layout = 'linear') +
         geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) 
 
 ggraph(arcPlot, layout = 'linear') +
         geom_edge_arc(aes(colour=awardComb), alpha=.3, width=.2) 
+
+
 
         
 
@@ -443,8 +901,46 @@ ggraph(arcPlot, layout = 'linear') +
 
 ggraph(arcPlot, layout = 'linear') +
         geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
+        facet_grid(~awardComb) +
+  
+
+```
+
+### arc plots 2001 - 2020
+
+```{r echo=FALSE, message=FALSE, fig.width=12}
+arcDataWP <- wpData %>% 
+  filter(honourYear>2000) %>% 
+        select(honourDate, pageCreation, prePost, gender, awardComb) %>% 
+        mutate (from = year(honourDate),
+                to = year(pageCreation)) %>% 
+        # slice_sample(n = 2) %>% 
+        group_by(from, to, gender, awardComb, prePost) %>% 
+        tally()  %>% 
+        rename(weight=n) %>% 
+        na.omit()
+
+arcPlotWP <- tbl_graph(edges=arcDataWP, directed=TRUE)
+ggraph(arcPlotWP, layout = 'linear') +
+        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) 
+
+ggraph(arcPlotWP, layout = 'linear') +
+        geom_edge_arc(aes(colour=awardComb), alpha=.3, width=.2) 
+ggraph(arcPlotWP, layout = 'linear') +
+        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
+        facet_wrap(~gender)
+
+ggraph(arcPlotWP, layout = 'linear') +
+        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
         facet_grid(~awardComb)
 
 
 ```
+
+
+Extra things to run if there is time:
+
+Looking at all one award v all multiple awards to see if the "very emminent" (indicted by multiple awards) looks any different to those with one award in terms of age creation. Greater rate of page creation etc?
+
+Honourary recipients and WP pages
 
