@@ -1305,7 +1305,7 @@ chart14 %>% layout(font=t,
 
 ```
 
-### Rate of Wikipedia page creation over time 
+#### Rate of Wikipedia page creation over time 
 
 The below chart shows a cumulative total of wikipedia pages created for those who hold an Order of Australia over time. There is a significant jump in cumulative page creation around 2005, and another visible jump around 2011.
 
