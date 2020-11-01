@@ -6,7 +6,7 @@ knit: (function(input_file, encoding) {
  encoding=encoding,
  output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 author: "Kelly Tall"
-date: "15/08/2020"
+date: "19/10/2020"
 
 
 output: 
@@ -20,13 +20,6 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-# install.packages("WikidataR")
-# install.packages("WikipediR")
-# install.packages("tidyverse")
-# install.packages("rlist")
-# install.packages("WikidataQueryServiceR")
-
-
 library(lubridate)
 library(tidyverse)
 library(DataExplorer)
@@ -35,78 +28,6 @@ library(scales)
 library(GGally)
 library(ggraph)
 library(tidygraph)
-
-
-
-# all data matched together- all updated as of 8th September
-
-allData <- read_csv("allDataBig.csv") %>% 
-        select(-X1) %>% 
-        mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
-        mutate(awardComb = factor(awardComb, levels = c("ADK", "AC", "AO", "AM", "OAM"))) %>% 
-        mutate (honourYear = year(honourDate),
-                pageYear = year(pageCreation))
-
-##reoving anon recipients
-allDataAnonRemoved <- allData %>% 
-  filter(fullName !="Anonymous") 
-
-        
-##tallying those with multiple awards
-multipleHonoursList <- allDataAnonRemoved %>% 
-        mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
-        arrange(name, dateAwarded) %>% 
-        group_by(name) %>% 
-        tally() %>% 
-        filter(n>1) 
-
-##use this data set to look just at recipients of honours - mutiple honours removed. Keeps oldest date for first award, and honour for most recent award
-
-recipientData <- allDataAnonRemoved %>% 
-        mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
-        arrange(name, dateAwarded) %>% 
-        # filter(wikipediaPage =="Yes") %>% 
-        # select(name, dateAwarded, pageCreation, AwardAbbr, daysDiff) %>%
-        group_by(name) %>% 
-        add_tally() %>% 
-        # filter(n>1) %>%
-        mutate(firstAwardDate = min(dateAwarded)) %>% 
-        mutate(highestAward1 = case_when(awardComb == "OAM" ~1,
-                                        awardComb == "AM" ~2,
-                                        awardComb == "AO" ~3,
-                                        awardComb == "AC" ~4,
-                                        awardComb == "AKD" ~5)) %>% 
-        mutate(highestAward2 = max(highestAward1)) %>% 
-        mutate(highestAward = case_when(highestAward2 == 1 ~"OAM",
-                                        highestAward2 == 2 ~"AM" ,
-                                        highestAward2 == 3~"AO",
-                                        highestAward2 == 4~"AC",
-                                        highestAward2 == 5 ~"AKD")) %>% 
-        filter(highestAward1 == max(highestAward1)) %>% 
-        mutate(daysDiff = pageCreation - firstAwardDate) %>% 
-        mutate(daysDiff = str_remove(daysDiff, "days")) %>% 
-        mutate(daysDiff = as.numeric(daysDiff)) %>% 
-        select(wikipediaPage:pageCreation, firstAwardDate, daysDiff:highestAward) %>% 
-        mutate(honourYear = year(firstAwardDate)) %>% 
-        mutate(pageYear = year(pageCreation)) %>% 
-        mutate(prePost = case_when(daysDiff >=0 ~ "Post",
-                                   daysDiff < 0 ~ "Pre")) %>% 
-        select(wikipediaPage:prePost, honourYear, pageYear, AwardAbbr:highestAward) %>% 
-  ungroup()
-
-
-
-
-##all those with WP article - based on recipients / not honours
-
-wpData <- recipientData %>% 
-        filter(wikipediaPage=="Yes" & prePost!="No wiki") %>% 
-        distinct(wikipediaURL, .keep_all = TRUE) %>% 
-        mutate(name = ifelse(!is.na(name), name, fullName)) 
-
-
-
-##chart formats
 
 colours <- c("#2d4059", "#ea5455")
 
@@ -122,22 +43,84 @@ custom_theme <-  theme(
                         axis.line.x = element_blank())
 
 
+# all data matched together- all updated as of 8th September
+
+allData <- read_csv("allData.csv") %>% 
+  mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
+        mutate(awardComb = factor(awardComb, levels = c("ADK", "AC", "AO", "AM", "OAM"))) %>% 
+  mutate(division = factor(division, levels = c("G", "M", "HG", "HM", "HP"))) %>% 
+  ungroup()
+
+
+anon_num <- allData %>% 
+  filter(name=="Anonymous" | is.na(awardComb) | fullName =="Anonymous")
+
+
+anon_numWP <- anon_num %>% 
+  filter(wikipediaPage =="Yes")
+
+        
+
+##reoving anon recipients
+allDataAnonRemoved <- read_csv("allDataAnonRemoved.csv") %>% 
+  mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
+        mutate(awardComb = factor(awardComb, levels = c("ADK", "AC", "AO", "AM", "OAM"))) %>% 
+    mutate(division = factor(division, levels = c("G", "M", "HG", "HM", "HP"))) %>% 
+  ungroup()
+
+
+multipleHonoursList <- allDataAnonRemoved %>% 
+  group_by(name) %>% 
+  add_tally() %>% 
+  filter(n>1) %>% 
+  ungroup()
+  
+
+multipleHonoursListIndividials <- allDataAnonRemoved %>% 
+  group_by(name) %>% 
+  tally() %>% 
+  filter(n>1) %>% 
+  ungroup()
+  
+
+
+
+##fxing up naming issues and flattening ultiple awards to one record where earliest award date is used as honoursdate and highest level is award level
+recipient <- read_csv("recipient.csv") %>% 
+  ungroup() %>% 
+  mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
+        mutate(awardComb = factor(awardComb, levels = c("ADK", "AC", "AO", "AM", "OAM"))) %>% 
+    mutate(division = factor(division, levels = c("G", "M", "HG", "HM", "HP"))) %>% 
+  ungroup()
+
+
+
+# all recipients with WP page
+
+wikipedia <- read_csv("wikipedia.csv") %>% 
+  mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
+        mutate(awardComb = factor(awardComb, levels = c("ADK", "AC", "AO", "AM", "OAM"))) %>% 
+    mutate(division = factor(division, levels = c("G", "M", "HG", "HM", "HP"))) %>% 
+  ungroup()
+        
 
 ```
 
-## Project Summary and Aims
+### Research Questions
 
-* Does the Australian honours list follow Wikipedia articles or do Wikipedia articles follow the honours?
-* Are there differences in this trend for women?
-* Are there differences in this trend for different honours categories/levels?
-* Is the rate of article creation for Australian honours winners increasing over time?
+1. Does the Order of Australia honours list follow Wikipedia articles or do Wikipedia articles follow the honours?
 
-## Overview of the Order of Australia
+2. Are there differences in this trend by gender?
 
-Order of Australia Awards issued since 1975, and has the following levels:
+3. Are there differences in this trend for different honours categories/levels?
 
-1. Dame of the Order of Australia
-2. Knight of the Order of Australia
+4. Are there differences in this trend by state / location?
+
+#### Background to Australian Honours System
+
+The Order of Australia honours system was established in 1975, and has the following levels:
+
+1. Dame/Knight(ADK) (1976-1983 and 2014-2015 only)
 3. Companion (AC)
 4. Officer (AO)
 5. Member (AM)
@@ -151,796 +134,1425 @@ Awards are issued with the following divisions:
 2. Military (M): warded to Australian Military
 3. Honourary: General (HG) and Military (HM) awards can also be issued to non-citizens as honourary awards. A new distinction was created recently to honour permanent-residents. These used to be indicated as "HG", but are now indicated by "HP".
 
-People can receive multiple Order of Australia honours in their lifetime. People can have their awards terminated, or return or refused their awards.  Some awards are recorded as anonymous.
+People can receive multiple Order of Australia honours in their lifetime. People can have their awards terminated by the Council, or return or refuse their awards.  Some awards are issued or recorded as anonymous on the honours Database.
 
-## Overview of Datasets and their prepararion
+### Data used in analysis
 
-There are two main sources for the data:
+
+The data used in this analysis is based on:
 
 1. <b>The Order of Australia list</b> that is maintained by the office of Prime Minister and Cabinet and found here: https://honours.pmc.gov.au/honours/search
 
 2. <b>Wikipedia articles</b> linked to Order of Australia recipients and their creation date
 
-### Order of Australia Honours List data set overview
-
-This data set consists of `r nrow(allData)` records, where each record is an Order of Australia honour associated with an individual. 
-
-The data set is sourced from the Office of the Prime Minister and Cabinet. In adddition to this data set there has been a column added for male. The recipients gender is indicated as male, female or unknown. Please see detail below on how this variable was constructued, and other relevant information
-
-<b>(ADD IN SECTION BELOW ON HOW ALEX CREATED THIS VARIABLE, PLUS HIS NOTES ON TRANSGENDER RECIPIENTS AND HOW THEY HAVE BEEN RECORDED)</b>
+### Dataset characteristics
 
 
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-
-anon_num <- allData %>% 
-        select(fullName, division) %>% 
-        filter(fullName == "Anonymous") 
-
-
-
-```
-
-
-The following characteristics of the data set need to be taken into consideration in analysis.
 
 #### 1. Anonymous Awards
 
-Of the `r nrow(allData)` total honours issued, there are `r nrow(anon_num)`  honours have been issued to "anonymous" recipients. 
+Of the `r nrow(allData)` honours issued since 1975, there are `r nrow(anon_num)` that are listed as being issued to an "anonymous" recipient. The reasons why an honour is listed as anonymous could be as follows; 
+* The recipient has requested anonynmity
+* Their honour has been withdrawn by the council
+* the recipient has refused, or returned their honour
 
-It is difficult to work out which anonymous honours are genuinely awarded anonymously, and which honours have been returned or removed.
+Records from the PMO dataset that are listed as anonymous or teminated awards are imcomplete. Anonymous awards have only been if there has been an honour date, and a wikipedia page and a page creation date. If the record is missing the Honours date, they have been excluded from the dataset. 
 
-Some of these listed as anononymous have handed their honour back after receiving, or have had teir honour removed. These recipients have been excluded from the analysis. Please note that some of these people will have a wikipedia page, as they include both emminent (ie: <a href="https://en.wikipedia.org/wiki/Patrick_White">Patrick White</a>) and infamous (ie: <a href="https://en.wikipedia.org/wiki/Brian_Burke_(Australian_politician">Brian Bourke </a>) Australians. 
-
-A breakdown of the division and the award level of anonymous awards is included below. (NA indicates a division is not availble for that honour record)
-
-```{r eval=TRUE, echo=FALSE, fig.width=1}
-
-anonTotal <- allData %>% 
-        select(fullName, division) %>% 
-        filter(fullName == "Anonymous") %>% 
-        group_by(division) %>% 
-        tally() %>% 
-        rename(Total = n)
-
-anonTotal
-
-anonByAwardType <- allData %>% 
-        select(fullName, AwardAbbr) %>% 
-        filter(fullName == "Anonymous") %>% 
-        group_by(AwardAbbr) %>% 
-        tally() %>% 
-        rename(Total = n) %>% 
-  ungroup()
-
-anonByAwardType
-```
-
-Removing all anonymous Honours recipients leaves us with `r nrow(allDataAnonRemoved)` honours. 
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-
-multipleHonours <- allDataAnonRemoved %>% 
-        select(wikipediaURL, name2) %>% 
-        group_by(name2) %>% 
-        tally() %>% 
-        filter(n>1) %>% 
-  ungroup()
-
-
-
-
-```
 
 #### 2. Multiple Awards
 
-Of the `r nrow(allDataAnonRemoved)` records, there are `r nrow(multipleHonours)` records associated with the same person. These are people who have been awarded more than one Honour. As part of the anlaysis is to understand the difference between award date and page creation, the date of the <b>first honour awarded to an individual</b> is used, not the date of the most recent honour. The level allocated to that individual is their most recent honour. So when looking at honours, we show an individuals most recent honour. When we look at honour issue date, we look at the first honour they have received. 
+Of these `r nrow(allData)` records, there are `r nrow(multipleHonoursListIndividials)` individuals who have received more than one honour, and these acocunt for `r nrow(recipient)` individual honours. In order to account for multiple honour dates connecting to one wikipedia article and page creation date we have used the date of the <i>earliest award</i>. When referring to the individuals honour level, we use the most <i>recent honour</i>. 
 
-To make it clear for the reader, please refer to the chart footer. "All Honours" refers to <i>honours</i> issued, noting that an individual can hold multiple homours.  "All Recipients" refers to the <i>individuals</i> receiving awards.
+For example, Angus Houston has received four honours. His earliest honour was an AM in 1990, and his most recent was a Knighthood in 2015. His wikipedia page was created in 2005. The table below illustrates his records extracted from the data set that contains all honours records.
+
+```{r angusMultiple, eval=TRUE, echo=FALSE, fig.width=1}
+
+angusExample <- allDataAnonRemoved %>% 
+  select(name, awardComb, honoursDate, WPDate) %>% 
+  filter(name == "Angus Houston")
+  
+
+angusExample
+```
+
+The table below illustrates his record extracted from the data set based on individual recipients. It shows that his honour level refers to his most recent honour in 2015 and his first award date refers to the first honour he received in 1990. 
 
 
-#### 3. Honour Divisions 
+```{r angusSingle, eval=TRUE, echo=FALSE, fig.width=1}
 
-As outlined above, awards are issued under different Divisions. The General and Military division are awarded to Australian citizens. "Honorary" are awarded to non-citizens and "HP" are awarded to Australian permanent residents.
+angusExample2 <- wikipedia %>% 
+  filter(name == "Angus Houston") %>% 
+  select(name, awardComb, firstAwardDate, WPDate) 
+  
+angusExample2
 
-There are some "Honorary" awards where we can assume that an individual would have had a wikipedia article created for them with or without the individual receiving an Order of Australia. For example, Jacques Cousteau, Jerry Lewis, or Mother Theresa. There are some people though who have received honary awards whose "emminence" is linked to Australia, such as Jill Kerr, Joern Utzon and Googie Withers, and who have a wikipedia article. The Duke of Edinbourough and Prince Charles both are Knights of the Order of Australia, but these awards are not issued with an honourary division. We can assume that these recipients would have wikipedia pages without receiving these honours.
+```
+
+<!-- To make it clear for the reader and what data set we are using, refer to the chart footer. "All Honours" refers to <i>honours</i> issued, noting that an individual can hold multiple honours.  "All Recipients" refers to the <i>individuals or people</i> receiving awards and is usually used when looking at connections to wikipedia. -->
 
 
-A breakdown of the honours by the divisions is shown below with the size of the circle representing the number of honours issued to each category. Compared to the General Division, the Honourary Divisions are a small, but this needs to be taken into account when interpreting the results
+#### 3. Award Divisions 
 
-<div style="margin-bottom:100px;">
+As outlined above, honours are issued with different divisions, and the breakdown is displayed below
 
-```{r HonourDivisionSummary, echo=FALSE, message=FALSE, warning=FALSE}
+```{r eval=TRUE, echo=FALSE}
 
-awardSummaryDivisionTally <- allDataAnonRemoved %>%
-        select(awardComb, division) %>%
-        group_by(awardComb, division) %>%
+division <- recipient %>% 
+  select(division) %>% 
+  group_by(division) %>% 
+  tally()
+division
+
+divisionNA <- recipient %>% 
+  select(division) %>% 
+  filter(is.na(division)) 
+  
+
+```
+
+The HG and HM division is only held by 389 recipients, but some of them we can assume would have a wikipedia page whether they have an order of Australia or not. For example, Jacques Cousteau, Jerry Lewis, or Mother Theresa are all honorary recipients of an Order of Australia. There are some people though who have received honary awards whose "emminence" is linked to Australia, such as Jill Kerr, Joern Utzon and Googie Withers, and who also have a wikipedia article. Because of this, all of the honourary records have been left in the data set.
+
+Please note there are `r nrow(divisionNA)` honours issued without a Division recorded on the PMO database. 
+
+
+
+
+#### 3. Date calculations
+
+The Australian Honors system began in 1975, and wikipedia was established on 15 January 2001. In order to calclate the time difference bewteen the award date and the wikipedia creation date, any award issued before 15 Jan 2001, has a "start date" of 15 January 2001. The table below shows the recipients first honour date (firstAwardDate), the date the time difference is calculted on (newAwardDate), the date their wikipedia entry was created, and the difference in time from honour to page creation. 
+
+<b>A.D Hope</b> received their award in 1981. The earliest a wikpedia page could be created for them is 2001, and their page was created in 2004, so the difference is three years. Looking further down <b>Aaron Kierney</b> had a page created for them in 2012, and they received their honours in 2020. The time difference is -8, meaning their page was created 8 years <i>before</i> they received their honours. 
+
+```{r eval=TRUE, echo=FALSE}
+
+dateCalcs <- wikipedia %>% 
+  select(name, firstAwardDate, newAwardDate, WPDate, yearDiff) %>% 
+        head()
+
+dateCalcs
+```
+
+### Addressing the research Questions 
+
+
+##### Number of awards versus number of pages
+
+Of the `r nrow(recipient)` recipients who have an Order of Australia, just over 11% also have a wikipedia page.
+
+
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+propAll <- recipient %>% 
+        select(wikipediaPage) %>% 
+        add_tally() %>% 
+        rename(total =n) %>% 
+        group_by(wikipediaPage, total) %>% 
         tally() %>% 
-  ungroup()
+        mutate(prop = n/total)
 
- divisionSummary <- ggplot(awardSummaryDivisionTally, aes(division, awardComb, size=n)) +
-        geom_point(color="#515BA5") +
-        scale_x_discrete(position = "top") +
-        scale_size(range = c (1, 20))+
-   labs(title="Division breakdown by Honour level",
-       x="Honour Division", y="Honour Level") 
-   
-        
-
-
-t <- list(
-        family = "Helvetica",
-        size = 14)
-
-ggplotly(divisionSummary, tooltip="n") %>% 
-        layout(height=460, font=t,
-               annotations = 
-                       list(x = 1, y = -0.1, text = "All Honours n=41,682. Last column are records with no Division indicated", 
-                            showarrow = F, xref='paper', yref='paper', 
-                            xanchor='right', yanchor='auto', xshift=1, yshift=5,
-                            font=list(size=10)))  
-
-```
-
-</div>
-### Wikipedia Article and Page Creation date dataset overview
-
-TO COME
-
-## Analysis  
-
-
-
-### Number of Honours awarded 
-
-<div style="margin-bottom:100px;">
-
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-
-awardSummaryTotal <- allDataAnonRemoved %>%
-        select(awardComb) %>%
-        group_by(awardComb) %>%
-        tally()
-
-awardSummaryState <- allDataAnonRemoved %>%
-        select(awardComb, state) %>%
-        group_by(state, awardComb) %>%
-        tally()
-
-awardSummaryTotalWikiFilterNumber <- allDataAnonRemoved %>%
-        select(honourYear, awardComb) %>%
-    filter(honourYear >2000)
-
-```
-
-</div>
-
-
-
-<div style="margin-bottom:100px;">
-Since 2001 there has been `r nrow(awardSummaryTotalWikiFilterNumber)` Orders of Australia awarded.
-
-```{r honourTotals, echo=FALSE, message=FALSE, warning=FALSE}
-
-awardTotal <- ggplot(awardSummaryTotal, aes(awardComb, n)) +
-  geom_col(fill="#2d4059") +
-  custom_theme+
-  # geom_text(aes(label = n, hjust=-.1))+
-  labs(title="All Orders of Australia awarded (1975 - 2020)",
-       x="Order of Australia (membership levels)", y="number of awards") +
+prop1 <-  ggplot(propAll, aes(wikipediaPage, prop, fill=wikipediaPage,
+                              text = paste(percent(prop)))) +
+  geom_col()+
+   labs(title="Proportion of Honours recipients who have a wikipedia page",
+       x="Have wikipedia Page", y="Proportion of honour recipients") +
   scale_fill_manual(values=colours)+
-  coord_flip()+
-  scale_y_continuous(limits = c(0, 27500), breaks = c(5000, 15000, 25000) )
+  scale_y_continuous(labels = percent)+
+  custom_theme
+  
+t <- list(
+        
+  family = "Helvetica",
+  size = 14)
+
+m <- list(
+  l = 50,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)
+
+chart1 <- ggplotly(prop1, tooltip = 'text') 
+
+
+
+chart1 %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.1, text = "All Recipients n=41,337", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-5,
+                font=list(size=10)),
+         autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
+
+
+
+```
+<div style="margin-bottom:40px;">
+</div>
+
+#### Proportions by Award Level 
+
+The proportion of those with and without pages is different depending on the honour level. The higher the honour, the more likely a recipient is to have a wikipedia page. All 19 Knights and Dames have a wikipedia page - <i>including The Duke of Edinburgh and The Prince of Wales </i>, and 85% of those who are an AC have a wikipedia page. The lower order reciptients have significantly fewer pages. 
+
+An AC is required to demonstrate eminence in their field, and an AO "distinguished service". AMs are issued to those demonstarting "exceptional service" to a field, activity or group, and an OAM is gven to those who demonstarte "service worthy or a particular recognition". A wikipedia page can be created for someone who is "worthy of notice". Assuming most AO's are notable in some way, there are 1955 currently without wikipedia pages. 
+
+From this we can see that the current highest order (AC) is well documented on wikipedia, but the lower orders, particularly the AO level, has potential for more representation on wikipedia. 
+
+
+<div style="margin-bottom:20px;">
+</div>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+pagePropAward <- recipient %>% 
+        select(awardComb, wikipediaPage) %>% 
+        group_by(awardComb) %>% 
+        add_tally(name="total") %>% 
+        ungroup() %>% 
+        group_by(awardComb, wikipediaPage, total) %>% 
+        tally(name="subtotal") %>% 
+        mutate(prop=subtotal/total)
+
+pagePropAwardChart <- ggplot(pagePropAward, aes(awardComb, prop, fill=wikipediaPage,
+                                                text = paste(percent(prop)))) +
+        geom_bar(position="fill", stat="identity") +
+        custom_theme+
+        labs(title="Proportion of award recipients that have a wikipedia article page by highest award received", 
+             x="Order of Australia (membership levels)", y="Proportion of recipients") +
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=colours)
+
 
 t <- list(
   family = "Helvetica",
   size = 14)
 
-ggplotly(awardTotal, tooltip="n") %>% 
-       layout(font=t,
+ggplotly(pagePropAwardChart, tooltip = 'text') %>% 
+  layout(font=t, 
          annotations = 
- list(x = 1, y = -0.1, text = "All Honours n=41,682", 
-      showarrow = F, xref='paper', yref='paper', 
-      xanchor='right', yanchor='auto', xshift=1, yshift=-2,
-      font=list(size=10))) 
-
-
-
-
-
+           list(x = 1, y = -0.2, text = "All Recipients n=41,337",
+                showarrow = F, xref='paper', yref='paper',
+                xanchor='right', yanchor='auto', xshift=1, yshift=-5,
+                font=list(size=10)),
+         autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
 
 ```
+
+<div style="margin-bottom:40px;">
 </div>
 
+#### Proportions by Gender
+
+Overall, just under 30% of all Order of Australia honours have been issues to women. The split is shown in the table below. There are thirty three recipients where no gender is recorded.
 
 
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
-<div style="margin: 20px 0 100px 0;">
-```{r honourNumberWikipediaYears, echo=FALSE, message=FALSE, warning=FALSE}
+genderSplit <- recipient %>% 
+  ungroup() %>% 
+  select(gender) %>% 
+  group_by(gender) %>% 
+  tally(name="number")
 
-awardSummaryTotalWikiFilter <- allDataAnonRemoved %>%
-        select(honourYear, awardComb) %>%
-    filter(honourYear >2000) %>% 
-        group_by(awardComb) %>%
-        tally()
+genderSplit
 
-
-
-awardTotalWikiYearFilter <- ggplot(awardSummaryTotalWikiFilter, aes(awardComb, n)) +
-  geom_col(fill="#2d4059") +
-  custom_theme+
-  # geom_text(aes(label = n, hjust=-.1))+
-  labs(title="All Orders of Australia awarded (2001 - 2020)",
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_fill_manual(values=colours)+
-  coord_flip()+
-  scale_y_continuous(limits = c(0, 18000), breaks = c(5000, 10000, 15000) )
-
-# t <- list(
-#   family = "Helvetica",
-#   size = 14)
-# 
-# ggplotly(awardTotalWikiYearFilter, tooltip="n") %>% 
-#        layout(font=t,
-#          annotations = 
-#  list(x = 1, y = -0.1, text = "All Honours awarded since 2001 n=24,997", 
-#       showarrow = F, xref='paper', yref='paper', 
-#       xanchor='right', yanchor='auto', xshift=1, yshift=-2,
-#       font=list(size=10))) 
+genderUndefined <- recipient %>% 
+  select(gender) %>%
+  filter(gender=="U")
 ```
 
-</div>
-
-### Number of Honours awarded by state
-
-<div style="margin: 20px 0 100px 0;">
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-awardSummaryState <- allDataAnonRemoved %>%
-        group_by(state) %>% 
-        add_tally() %>% 
-        rename(stateAwardTotal = n) %>% 
-        select(awardComb, state, stateAwardTotal) %>%
-        mutate(chartLabel = paste(state, " n=",stateAwardTotal, sep="")) %>% 
-        group_by(state, awardComb, chartLabel) %>%
-        tally() %>% 
-        mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
-        mutate(chartLabel = as_factor(chartLabel))
 
 
+Although women are under represented on the honours list, the rate of page creation overall for men and women is propportionally similar, with women at just under 10% and men at 11%. While the base number of women receiving awards is lower, the proportion of pages created for them in wikipedia is roughly the same. 
 
-awardState <- ggplot(awardSummaryState, aes(reorder(awardComb, n), n))+
-        geom_col(fill="#2d4059") +
-        facet_wrap(~chartLabel)+
-  # geom_text(aes(label=n), size=2, hjust=-.1)+
-        custom_theme+
-        labs(title="Number of honours by level of membership by state",
-             x="Order of Australia (levels)", y="Number of Honours")+ 
-        coord_flip()+
-        # geom_text(aes(label=n), hjust=-.3, size=3) +
-        scale_y_continuous(limits = c(0, 10100), n.breaks=3)
+<i>(Note: The below chart excludes the `r nrow(genderUndefined)` recipients who have no gender allocated to the data set.)</i>
 
-# t <- list(
-#   family = "Helvetica",
-#   size = 12)
-# 
-# 
-# ggplotly(awardState, tooltip = "n") %>% 
-#        layout(font=t,
-#          annotations = 
-#  list(x = 1, y = -0.1, text = "All Honours by State n=41,682. 'Other' refers to honourary awards, and/or those not residing in Australia, 
-#              or where there was no location information provided in the record.", 
-#       showarrow = F, xref='paper', yref='paper', 
-#       xanchor='right', yanchor='auto', xshift=1, yshift=-4,
-#       font=list(size=8))) 
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
+pagePropGender <- recipient %>% 
+        select(gender, wikipediaPage) %>% 
+  filter(gender !="U") %>% 
+        group_by(gender) %>% 
+        add_tally(name="total") %>% 
+        group_by(wikipediaPage, gender) %>% 
+        add_tally(name="subtotal") %>% 
+        mutate(prop=subtotal/total) %>% 
+        group_by(gender, wikipediaPage, prop) %>% 
+        summarise()
+        
 
-
-
-
-```
-</div>
-
-<div style="margin: 20px 0 100px 0;">
-
-### Number of Recipients with Wikipedia Page articles
-
-```{r echo=FALSE, message=FALSE}
-
-pagePropTotal <-  recipientData%>%
-        select(awardComb, wikipediaPage) %>%
-        group_by(awardComb, wikipediaPage) %>%
-        tally()
-
-
-pagePropTotalWP <-  recipientData%>%
-  filter(honourYear >2000) %>% 
-        select(awardComb, wikipediaPage) %>%
-        group_by(awardComb, wikipediaPage) %>%
-        tally()
-
-
-
-pagePropTotalWP <-  recipientData%>%
-  filter(honourYear >2000) %>% 
-        select(awardComb, wikipediaPage) %>%
-        group_by(awardComb, wikipediaPage) %>%
-        tally()
-
-awardWPNum <- ggplot(pagePropTotal, aes(awardComb,n)) +
-  geom_col(aes(fill=wikipediaPage)) +
-  custom_theme+
-  # geom_text(aes(label=n), size=2, hjust=.8)+
-  labs(title="Number of honour recipients that have a wikipedia article page, 1975 - 2020",
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_fill_manual(values=colours) +
-  coord_flip()
-
-ggplotly(awardWPNum, tooltip = "n") 
-
-awardWPNum <- ggplot(pagePropTotalWP, aes(awardComb,n)) +
-  geom_col(aes(fill=wikipediaPage)) +
-  custom_theme+
-  # geom_text(aes(label=n), size=2, hjust=.8)+
-  labs(title="Number of honour recipients that have a wikipedia article page, 2001 - 2020",
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_fill_manual(values=colours) +
-  coord_flip()
-
-ggplotly(awardWPNum, tooltip = "n") 
-
-
-```
-
-</div>
-
-
-<div style="margin-bottom:100px;">
-
-### Number of Recipients with Wikipedia Page articles by state
-
-```{r echo=FALSE, message=FALSE}
-
-pagePropState <- recipientData %>%
-        select(awardComb, wikipediaPage, state) %>%
-        group_by(awardComb, wikipediaPage, state) %>%
-        tally()
-  
-
-awardWPNumState <- ggplot(pagePropState, aes(awardComb, n)) +
-  geom_col(aes(fill=wikipediaPage)) +
-  facet_wrap(~state)+
-  custom_theme+
-  labs(title="Number of award recipients that have a wikipedia article page by state",
-       x="Order of Australia (membership levels)", y="number of awards")+
-  scale_fill_manual(values=colours)+
-  coord_flip()
-
-
-
-ggplotly(awardWPNumState, tooltip = "n")
-   # layout(font=t,
-   #       annotations = 
-   #        list(x = 1, y = -0.1, text = "All Recipients n=41,314", 
-   #    showarrow = F, xref='paper', yref='paper', 
-   #    xanchor='right', yanchor='auto', xshift=1, yshift=-4,
-   #    font=list(size=10))) 
-
-```
-
-<div style="margin-bottom:100px;">
-
-### Proportion of Recipients with Wikipedia Page articles 
-
-```{r awardPropTotal, echo=FALSE, message=FALSE}
-awardPropTotal <- ggplot(pagePropTotal, aes(reorder(awardComb, -n), n, fill=wikipediaPage)) +
-  geom_bar(position="fill", stat="identity") +
-  custom_theme+
-  labs(title="Proportion of award recipients that have a wikipedia article page 1975 - 2020",
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_y_continuous(labels = percent)+
-  scale_fill_manual(values=colours)
-
-ggplotly(awardPropTotal, tooltip="n") 
-
-awardPropTotal <- ggplot(pagePropTotalWP, aes(reorder(awardComb, -n), n, fill=wikipediaPage)) +
-  geom_bar(position="fill", stat="identity") +
-  custom_theme+
-  labs(title="Proportion of award recipients that have a wikipedia article page 2001 - 2020",
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_y_continuous(labels = percent)+
-  scale_fill_manual(values=colours)
-
-ggplotly(awardPropTotal, tooltip="n") 
-   
-
-```
-
-Note: only slight differences in proprtions when looking at all honours v honours issued since 2001 
-
-</div>
-
-### Proportion of Recipients with Wikipedia Page articles by state
-```{r echo=FALSE, message=FALSE}
-
-
-ggplot(pagePropState, aes(reorder(awardComb, n), n, fill=wikipediaPage)) +
+pagePropGenderChart <- ggplot(pagePropGender, aes(gender, prop, fill=wikipediaPage,
+                                                  text = paste(percent(prop)))) +
         geom_bar(position="fill", stat="identity") +
-        facet_wrap(~state)+
         custom_theme+
-        labs(title="Proportion of award recipients that have a wikipedia article page by state",
-       x="Order of Australia (membership levels)", y="number of awards") +
-  scale_y_continuous(labels = percent)+
-  scale_fill_manual(values=colours)
+        labs(title="Proportion of award recipients that have a wikipedia article page by Gender", 
+             x="Order of Australia (membership levels)", y="Proportion of recipients") +
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=colours)
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
 
 
-ggplotly(awardWPPropState, tooltip="n")
 
+ggplotly(pagePropGenderChart, tooltip="text") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "All Recipients with allocated Gender n=41,309", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
+
+
+```
+
+<div style="margin-bottom:40px;">
+</div>
+
+
+Looking at the proprtion of pages created by honours level though, reveals that women receiving some honours have a higher propotion of pages created for them, compared to men. This possibly indicates that different initiatives that encourage page creation for women, are working. 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+pagePropGenderAward <- recipient %>% 
+  ungroup() %>% 
+  filter(gender!="U") %>% 
+              select(gender, awardComb, wikipediaPage) %>% 
+        group_by(gender, awardComb) %>% 
+        add_tally(name="total") %>% 
+  
+        group_by(gender, awardComb, wikipediaPage) %>% 
+        add_tally(name="subtotal") %>% 
+        mutate(prop=subtotal/total) %>% 
+        group_by(gender, awardComb, wikipediaPage, prop) %>% 
+        summarise()
+
+
+
+pagePropGenderAwardChart <- ggplot(pagePropGenderAward, aes(gender, prop, fill=wikipediaPage,text = paste(percent(prop)))) +
+        geom_bar(position="fill", stat="identity") +
+        custom_theme+
+        labs(title="Proportion of award recipients that have a wikipedia article page by Gender", 
+             x="Order of Australia (membership levels)", y="Proportion of recipients") +
+
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=colours)+
+        facet_wrap(~awardComb)
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)        
+
+
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+# str(test[['x']][['layout']][['annotations']]) 
+
+
+
+test <- ggplotly(pagePropGenderAwardChart, tooltip="text")
+
+test[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+test[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+test %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "All Recipients with allocated Gender n=41,309", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
 
 
 
 ```
 
-### Page creation pre and post award
+<div style="margin-bottom:40px;">
+</div>
 
+The below charts shows the difference between the proportion of pages created for men and women, with the line showing the total proportion or average for each honours level of those with a page created. Anything above the line is "above average". It shows how AC and AO female recipients have an above average chance to have a page created for them. compred to men.
+ 
+ 
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
-```{r echo=FALSE, message=FALSE}
-prePost <- recipientData %>%
-  filter(wikipediaPage=="Yes") %>%
-  filter(prePost!="No wiki") %>%
-  select(prePost) %>%
-  group_by(prePost) %>%
-  tally()
-
-
-prePostWP <- recipientData %>%
-  filter(honourYear>2000) %>% 
-  filter(wikipediaPage=="Yes") %>%
-  filter(prePost!="No wiki") %>%
-  select(prePost) %>%
-  group_by(prePost) %>%
-  tally()
-
-
-awardprePost <- ggplot(prePost, aes(prePost, n)) +
-  geom_col(fill="#2d4059") +
-  custom_theme +
-  labs(title="Number of pages created pre / post award",
-       y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued") +
-  scale_fill_manual(values=colours)
-
-
-awardprePostWP <- ggplot(prePostWP, aes(prePost, n)) +
-  geom_col(fill="#2d4059") +
-  custom_theme +
-  labs(title="Number of pages created pre / post award",
-       y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued") +
-  scale_fill_manual(values=colours)
-
-
-
-ggplotly(awardprePost, tooltip = "n")
-ggplotly(awardprePostWP, tooltip = "n")
-```
-
-### Number of Pages created over time
-
-```{r echo=FALSE, message=FALSE}
-
-timeline <- recipientData %>% 
-  filter(wikipediaPage == "Yes") %>%
-  select(pageCreation, wikipediaPage) %>%
-  group_by(pageCreation, wikipediaPage) %>%
-  tally()
-
-
-timelineYear <- recipientData %>% 
-  filter(wikipediaPage == "Yes") %>%
-  select(pageYear, wikipediaPage) %>%
-  group_by(pageYear, wikipediaPage) %>%
-  tally()
-
-
-timelinePlot <- ggplot(timeline, aes(pageCreation, n)) +
-  geom_line(colour="#2d4059") +
-  custom_theme+
-  geom_smooth()+
-  labs(title="Number of pages created by day",
-       y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued")
-
-ggplotly(timelinePlot, tooltip = "n")
-
-
-timelinePlot2 <- ggplot(timelineYear, aes(pageYear, n)) +
-  geom_line(colour="#2d4059") +
-  custom_theme+
-  # geom_smooth()+
-  labs(title="Number of pages created by Year",
-       y="number of wikiPedia Articles", x= "page creation year", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued")
-
-ggplotly(timelinePlot2, tooltip = "n")
-
-
-
-```
-
-
-### Cumulative Pages over time
-
-```{r echo=FALSE, message=FALSE}
-cumulative <- recipientData %>%
-  filter(wikipediaPage == "Yes") %>%
-  select(pageCreation, wikipediaPage) %>%
-  group_by(pageCreation) %>%
-  arrange(pageCreation) %>%
-  tally() %>%
-  mutate(n= as.numeric(n)) %>%
-  mutate(cumulate = cumsum(n))
-
-cumulativePlot <- ggplot(cumulative, aes(pageCreation, cumulate) )+
-  # geom_smooth()+
-   geom_line(colour="#2d4059") +
-  custom_theme+
-  labs(title="Cumulative Pages created by Day",
-       y="number of wikiPedia Articles (cumulative)", x= "page creation year", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued")
-
-ggplotly(cumulativePlot, tooltip = "cumulate")
-
-
-cumulativeYear <- recipientData %>%
-  filter(wikipediaPage == "Yes") %>%
-  select(pageYear, wikipediaPage) %>%
-  group_by(pageYear) %>%
-  arrange(pageYear) %>%
-  tally() %>%
-  mutate(n= as.numeric(n)) %>%
-  mutate(cumulate = cumsum(n))
-
-cumulativePlot <- ggplot(cumulativeYear, aes(pageYear, cumulate) )+
-  # geom_smooth()+
-   geom_line(colour="#2d4059") +
-  custom_theme+
-  labs(title="Cumulative Pages created by Year",
-       y="number of wikiPedia Articles (cumulative)", x= "page creation year", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued")
-
-ggplotly(cumulativePlot, tooltip = "cumulate")
-
-```
-
-```{r echo=FALSE, message=FALSE}
-
-prePostGender <- recipientData %>%
-  filter(wikipediaPage=="Yes") %>%
-  filter(prePost!="No wiki") %>%
-  select(prePost, gender) %>%
-  group_by(prePost, gender) %>%
-  tally()
-
-awardprePostGender <- ggplot(prePostGender, aes(prePost, n)) +
-  geom_col(aes(fill=gender)) +
-  custom_theme +
-  labs(title="Number of pages created pre / post award",
-       y="number of wikiPedia Articles", caption="Pre is calculated as less than zero days before the award was issued. Post is calculated as 0 or greater than days after award issued") +
-  scale_fill_manual(values=coloursGender)
-
-ggplotly(awardprePostGender, tooltip = "n")
-
-```
-
-
-```{r echo=FALSE, message=FALSE}
-
-cumulativeGender <- recipientData %>%
-  filter(wikipediaPage == "Yes") %>%
-  select(pageCreation, wikipediaPage, gender) %>%
-  group_by(gender, pageCreation) %>%
-  arrange(pageCreation) %>%
-  tally() %>%
-  mutate(n= as.numeric(n)) %>%
-  mutate(cumulate = cumsum(n))
-
-cumulativePlotGender <- ggplot(cumulativeGender, aes(pageCreation, cumulate) )+
-  geom_smooth()+
-  geom_line(aes(colour=gender))+
-  custom_theme +
-  scale_colour_manual(values=coloursGender)
-
-ggplotly(cumulativePlotGender, tooltip = "cumulate")
-```
-
-
-```{r echo=FALSE, message=FALSE}
-####  slope chart
-
-slopeData <- wpData %>% 
-        select(honourYear, pageYear, prePost, gender, awardComb)
-
-ggparcoord(slopeData, columns = 1:2, groupColumn="prePost", alphaLines = 0.04) +
-  custom_theme +
-  labs(title="Number of pages created pre / post award 1975 - 2020") +
-  scale_colour_manual(values=colours)
+pageAverageTotal <- recipient %>% 
+        ungroup() %>% 
+        filter(gender!="U") %>% 
+        select(gender, awardComb, wikipediaPage) %>% 
+        group_by(awardComb) %>% 
+        add_tally(name = "totalHonour") %>% 
+        group_by(awardComb, wikipediaPage) %>% 
+        add_tally(name = "totalWP") %>% 
+        mutate(totalProp=totalWP/totalHonour) %>% 
+        group_by(awardComb,gender) %>% 
+                add_tally(name="totalGender") %>% 
+                group_by(awardComb, wikipediaPage, gender) %>% 
+                add_tally(name="totalWPGender") %>% 
+                mutate(totalWPProp = totalWPGender/totalGender) %>% 
+        group_by(awardComb,gender, wikipediaPage, totalProp, totalWPProp) %>% 
+        summarise(n = n()) %>% 
+        filter(wikipediaPage=="Yes")
         
-ggparcoord(slopeData, columns = 1:2, groupColumn="prePost", alphaLines = 0.05) +
-        facet_wrap(~gender)+
-  custom_theme +
-  labs(title="Number of pages created pre / post award 1975 - 2020 by gender") +
-  scale_colour_manual(values=colours)
+        
+ 
+pageAverageGenderAwardChart <- ggplot(pageAverageTotal, aes(gender, totalWPProp, fill=gender, text = paste(percent(totalWPProp)))) +
+        geom_col() +
+        geom_hline(aes(yintercept = totalProp))+
+        custom_theme+
+        labs(title="Proportion of award recipients that have a wikipedia article page by Gender", subtitle = "Line represents total proportion to highlight differences",
+             x="Order of Australia (membership levels)", y="Proportion of recipients") +
 
-ggparcoord(slopeData, columns = 1:2, groupColumn="prePost", alphaLines = 0.05) +
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=coloursGender)+
+        facet_wrap(~awardComb) 
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+chart4 <- ggplotly(pageAverageGenderAwardChart, tooltip="text")
+
+chart4[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+chart4[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+chart4 %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "All Recipients with allocated Gender n=41,309", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
+
+
+
+
+```
+
+
+The below chart shows the biggest difference in <i>proportions</i> of pages is with AM.
+
+(How to understand this chart: the proportion of AC honours recipients to have a wikipedia page is 85%. The proportion of women who hve an AC and a wikipedia page is 95%. This is a 12.5% difference between the two percentages / propotions of total AC holders wth wikipedia pages and women AC holders with wikipedia pages)
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+percdiff<- pageAverageTotal %>% 
+        ungroup() %>% 
+        group_by(awardComb) %>% 
+        # arrange(awardComb, gender) %>% 
+        mutate(totalDiff = (((totalWPProp*100)-(totalProp*100))/(totalProp*100))) %>% 
+        mutate(genderDiff = (lag(totalWPProp)-(totalWPProp))/totalWPProp)
+                             
+                             
+percdiffChart <- ggplot(percdiff, aes(gender, totalDiff, fill=gender, text=percent(totalDiff))) +
+        geom_col() +
+        geom_hline(aes(yintercept=0), colour = "lightgrey")+
+        custom_theme+
+        labs(title="% Difference of men and women compared to honours level average", subtitle = "Line represents total proportion to highlight differences",
+             x="Order of Australia (membership levels)", y="Proportion of recipients") +
+
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=coloursGender)+
+        facet_wrap(~awardComb) 
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+    
+chart5 <- ggplotly(percdiffChart, tooltip="text")
+chart5[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+chart5[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+
+chart5 %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "All Recipients with allocated Gender n=41,309", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
+
+```
+
+Comparing men versus women at each honours level, shows us that proportionally the biggest difference is with AM's, where there is a differnce of 28%
+
+(How to understand this chart: the proportion of female AC honours recipients to have a wikipedia page is 95%, and the proportion of males who have an AC who have a wikipedia page is 82%. This gives us a proportional difference of 15%). 
+
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+percdiffChartBYAWARD <- ggplot(percdiff, aes(awardComb, genderDiff, text=percent(genderDiff))) +
+        geom_col(fill="#2d4059") +
+        geom_hline(aes(yintercept=0), colour = "lightgrey")+
+        custom_theme+
+        labs(title="% Difference from women versus men WITHIN honour level",
+             x="% difference in Order of Australia (membership levels)", y="Proportion of recipients") +
+
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=colours)
+    
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+ggplotly(percdiffChartBYAWARD, tooltip="text") %>% 
+        layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "All Recipients with allocated Gender n=41,309", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
+
+
+```
+
+<div style="margin-bottom:40px;">
+</div>
+
+
+
+
+
+#### State and proportions of awards
+
+There is slightly more ACT recipients who have a wikipedia page compared to other states (higher rate of politicians and public servants who receievd awards?). The higher proportion of "other" relates to the honourary award recipients referred to above, who are internationally eminent and would be more likely to ahve a WP page whether they have an Australian honour or not.    .   
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+pagePropState <- recipient %>% 
+        select(state, wikipediaPage) %>% 
+        group_by(state) %>% 
+        add_tally(name="total") %>% 
+        group_by(state, wikipediaPage) %>% 
+        add_tally(name="subtotal") %>% 
+        mutate(prop=subtotal/total) %>% 
+        group_by(state, wikipediaPage, prop) %>% 
+        summarise(n=n())
+
+
+
+pagePropStateChart <- ggplot(pagePropState, aes(state, prop, fill=wikipediaPage, text=percent(prop))) +
+        geom_bar(position="fill", stat="identity") +
+        custom_theme+
+        labs(title="Proportion of award recipients that have a wikipedia article page by state", 
+             x="Order of Australia (membership levels)", y="Proportion of recipients") +
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=colours)
+
+m <- list(
+  l = 75,
+  r = 200,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+ggplotly(pagePropStateChart, tooltip="text") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.1, text = "All Recipients n=41,337", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+         autosize=F,
+         width=800, 
+         height=500,
+         margin=m) 
+
+
+
+# pagePropStateChartAward <- ggplot(pagePropStateAward, aes(awardComb, prop, fill=wikipediaPage, text=percent(prop))) +
+#         geom_bar(position="fill", stat="identity") +
+#         custom_theme+
+#         labs(title="Proportion of award recipients that have a wikipedia article page by state", 
+#              x="Order of Australia (membership levels)", y="Proportion of recipients") +
+#         scale_y_continuous(labels = percent)+
+#         scale_fill_manual(values=colours)+
+#         facet_wrap(~state)
+```
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+pagePropStateAward <- recipient %>% 
+        select(state, wikipediaPage, awardComb) %>% 
+        group_by(state, awardComb) %>% 
+        add_tally(name="total") %>% 
+        group_by(state, wikipediaPage, awardComb) %>% 
+        add_tally(name="subtotal") %>% 
+        mutate(prop=subtotal/total) %>% 
+        group_by(state, wikipediaPage, awardComb, prop) %>% 
+        summarise(n=n()) 
+
+
+
+pagePropStateChartAward <- ggplot(pagePropStateAward, aes(awardComb, prop, fill=wikipediaPage, text=percent(prop))) +
+        geom_bar(position="fill", stat="identity") +
+        custom_theme+
+        labs(title="Proportion of award recipients with wikipedia page by honours level split by state", 
+             x="Order of Australia (membership levels)", y="Proportion of recipients") +
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=colours)+
+        facet_wrap(~state)
+
+m <- list(
+  l = 75,
+  r = 200,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+chart6 <- ggplotly(pagePropStateChartAward, tooltip="text")
+
+chart6[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+chart6[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+chart6 %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "All Recipients n=41,342", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
+
+```
+
+The below chart shows all recipeints with a wikipedia page (exclusing Knights and Dames does to low sample size and all from "Other" location). The line represents the national average for each award level, showing states with above or below average performance.
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+pageAverageTotalState <- recipient %>% 
+        ungroup() %>%
+        select(state, awardComb, wikipediaPage) %>% 
+        filter(state!="Other") %>% 
+        filter(awardComb!="ADK") %>% 
+        group_by(awardComb) %>% 
+        add_tally(name = "totalHonour") %>% 
+        group_by(awardComb, wikipediaPage) %>% 
+        add_tally(name = "totalWP") %>% 
+        mutate(totalProp=totalWP/totalHonour) %>% 
+        group_by(awardComb,state) %>% 
+                add_tally(name="totalState") %>% 
+                group_by(awardComb, wikipediaPage, state) %>% 
+                add_tally(name="totalWPState") %>% 
+                mutate(totalWPProp = totalWPState/totalState) %>% 
+        group_by(awardComb,state, wikipediaPage, totalProp, totalWPProp) %>% 
+        filter(wikipediaPage=="Yes") %>% 
+        summarise(n = n()) %>% 
+        mutate(propComparison = (totalWPProp - totalProp)/totalWPProp)
+        
+        
+
+   
+pageAverageTotalStateChart <- ggplot(pageAverageTotalState, aes(state,totalWPProp, text = paste(percent(totalWPProp)))) +
+        geom_col(fill="#2d4059") +
+        geom_hline(aes(yintercept = totalProp))+
+        custom_theme+
+        labs(title="Proportion of award recipients that have a wikipedia article page by state", subtitle = "Line represents total proportion to highlight differences",
+             x="Home state of honour recipient ", y="Proportion of recipients") +
+
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=coloursGender)+
+        facet_wrap(~awardComb) 
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+chart8 <- ggplotly(pageAverageTotalStateChart, tooltip="text")
+
+chart8[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+chart8[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+chart8 %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "Recipients with WP page excluding ADK & Other location n=4053", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
+        
+```
+
+The below charts shows the proportional difference between those with a wikipedia page and an honour level, compared to the national average. There is no evident pattern of one state outperforming another at each level. 
+
+(Could this be there is no "state pride" in creating wikipedia pages for local recipients? Rather people create based on their intersts in theme of politics or sport or science, rather than "home grown heroes"?)
+
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+pageAverageTotalStateChartProp <- ggplot(pageAverageTotalState, aes(state,propComparison, text = paste(percent(propComparison)))) +
+        geom_col(fill="#2d4059") +
+        # geom_hline(aes(yintercept = totalProp))+
+        custom_theme+
+        labs(title="% difference between national and state level for each honour level", subtitle = "Line represents total proportion to highlight differences",
+             x="Home state of honour recipient ", y="Proportion of recipients") +
+
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=coloursGender)+
+        facet_wrap(~awardComb) 
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+chart9 <- ggplotly(pageAverageTotalStateChartProp, tooltip="text")
+
+chart9[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+chart9[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+chart9 %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "Recipients with WP page excluding ADK & Other location n=4053", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
+
+
+```
+
+
+#### Summary - Number of awards versus number of pages
+
+* Overall, 11% of honour recipients have a wikipedia page. 
+* The higher the honours level, the more likely a page has been created for the recipient, reflecting the notability of the person, and the notability requirement for having a wikipedia article.
+* There is still potential for more pages to be created at the AO level, which currenlty is the second highest honour in the system, yet more than half of the recipients do not have a wikipedia article. 
+* Women  are under-represented in the hoours list, but the proportion of wikipedia pages is quite strong, with more pages created for women who have receievd an AC or an AO, than for me who have also receieved the same honour. This may be an outcome of different initiatves that promote respresentation of women on wikiepdia.   
+* Looking at proportional differences shows us the largest difference between women and men who have a wikipedia page is at the AM level, where there is a 28% difference. 
+* There are no evident patterns looking at state and those who have a page compered to the national average. No state is "outperforming" another for the number of oages created. Is this  because people create pages based on interest in a field or topic rather than the home location of the honours recipient?
+
+#### Differences between honours date and page creation date
+
+This section examines the rate of page creation, and the difference between the time it takes for a person to receive an Honour, and the time their page is created. Does it lag or lead?
+
+The table below shows the number of recipients who received their honour before or on/after the launch of Wikipedia on 15 January 2001. Close to 60% of the honour recipients received their honour on or after the start of wikipedia. PreVPost is the raw numbers of people who receivd an award before or on/after the start of Wikipedia, and preVPostProp is the proportion.
+
+
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+prePost <- recipient %>% 
+        add_tally(name = "total") %>% 
+  mutate(prePost = case_when(firstAwardDate<"2001-01-15" ~ "Pre WP",
+                                   firstAwardDate>="2001-01-15" ~ "Post WP")) %>% 
+mutate(prePost = factor(prePost, levels = c("Pre WP", "Post WP"))) %>% 
+  select(prePost, total) %>% 
+  group_by(prePost, total) %>% 
+  tally(name= "preVPost") %>% 
+        mutate(preVPostProp = preVPost/total )
+
+
+prePost
+
+```
+
+<div style="margin-bottom:40px;">
+</div>
+
+
+
+
+Looking at those who have a wikipedia page and broken down between those who receievd their honour before or after wikipedia started. The propotion of pages have been created at a similar rate of between 10-11%. At this level there doesn't appear to be any "recency bias" of a larger proportion of pages created honour recipents who received their award aftre the strat of Wikipedia. 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+ 
+prePostProp <- recipient %>% 
+    ungroup() %>% 
+  mutate(prePost = case_when(firstAwardDate<"2001-01-15" ~ "Pre WP",
+                                   firstAwardDate>="2001-01-15" ~ "Post WP")) %>% 
+        mutate(prePost = factor(prePost, levels = c("Pre WP", "Post WP"))) %>% 
+  select(prePost, wikipediaPage) %>% 
+        group_by(prePost) %>% 
+        add_tally(name="prePostTotal") %>% 
+  group_by(prePost, wikipediaPage) %>% 
+        add_tally(name = "prePostWPTotal") %>% 
+        mutate(prop = prePostWPTotal / prePostTotal) %>% 
+        group_by(prePost, wikipediaPage, prop) %>% 
+        summarise(n())
+
+
+
+prePostChart <- ggplot(prePostProp, aes(prePost, prop, fill=wikipediaPage, text=percent(prop))) +
+        geom_bar(position="fill", stat="identity") +
+        custom_theme+
+        labs(title="Proportion of honours receievd pre/post WP, that have a wikipedia article", 
+             x="Pre and Post 15th Jan 2001", y="Proportion of recipients") +
+        scale_y_continuous(labels = percent)+
+        scale_fill_manual(values=colours)
+
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+ggplotly(prePostChart, tooltip="text") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.1, text = "All Recipients n=41,337", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+         autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
+
+
+
+
+
+
+```
+
+#### Page or Award - what comes first?
+
+The below chart shows the distrubtion of wikipedia page creation over time. The bars left of zero represent all whose page was created <i>before</i> they received an award. All those to the right of zero represent all whose page was created <i>after</i> they receievd an award
+
+The distribution of the chart below shows based on all recipeints, there are more pages created after someone has received an award, than before. 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+prePostAward <- wikipedia %>% 
+        select(yearDiff) %>%
+        group_by(yearDiff) %>% 
+        tally() 
+  
+        
+
+
+yearDiffChart <-  ggplot(prePostAward, aes(yearDiff, n, text=paste('num:', n))) +
+        geom_col(fill="#2d4059") +
+  custom_theme +
+        labs(title="Difference in time beween award and wikipedia page creation", 
+             x="Years Difference ", y="Number of recipients")
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+
+
+ggplotly(yearDiffChart, tooltip="text") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.15, text = "All Recipients with wikipedia page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+         autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
+
+
+
+
+
+```
+
+This though may not be an accurate view, as we are including a large group who were awarded an honour before Wikipedia began. 09999999999999999999999999999999999999999999999 
+
+The below chart only shows those who receievd an honour on or after the start of wikpedia, and there is a skew towards pages being created before their honour is received. 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+prePostAwardPrePostWP <- wikipedia %>% 
+        select(firstAwardDate, wikipediaYear, yearDiff) %>% 
+        mutate(prePost = case_when(firstAwardDate<"2001-01-15" ~ "Pre WP",
+                                   firstAwardDate>="2001-01-15" ~ "Post WP")) %>% 
+        filter(prePost=="Post WP") %>% 
+        select(yearDiff, prePost) %>%
+        group_by(prePost, yearDiff) %>% 
+        tally() 
+  
+
+prePostAwardPrePostWPFilter <- wikipedia %>% 
+        select(firstAwardDate, wikipediaYear, yearDiff) %>% 
+        mutate(prePost = case_when(firstAwardDate<"2001-01-15" ~ "Pre WP",
+                                   firstAwardDate>="2001-01-15" ~ "Post WP")) %>% 
+        filter(prePost=="Pre WP") %>% 
+        select(yearDiff, prePost) %>%
+        group_by(prePost, yearDiff) %>% 
+        tally() 
+        
+
+
+yearDiffPrePostChart <-  ggplot(prePostAwardPrePostWP, aes(yearDiff, n)) +
+        geom_col(fill="#2d4059") +
+  custom_theme +
+        labs(title="Years Difference between honour and page (only those with award on or post 2001)", 
+             x="Years Difference ", y="Number of recipients")
+
+
+yearDiffPrePostChartFilter <-  ggplot(prePostAwardPrePostWPFilter, aes(yearDiff, n, text=paste('num:', n))) +
+        geom_col(fill="#2d4059") +
+  custom_theme 
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+ggplotly(yearDiffPrePostChart, tooltip="text") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.15, text = "All Recipients w. WP page receiving award post-wikipedia n=2528", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+         autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
+
+
+```
+
+
+Focussing further on this group who received their honour on or after the start of wikipedia, there is a larger proportion (54%) who have their award before the page was created. 
+
+```{r eval=TRUE, echo=FALSE}
+
+
+prePostAwardSumExcOld <- wikipedia %>% 
+        filter(firstAwardDate>"2001-01-15") %>% 
+        select(name, timeDiff) %>%
+        add_tally(name="total") %>% 
+  mutate(beforeAfter = case_when(timeDiff >=0 ~ "on or after honours",
+                                 timeDiff<0 ~ "before Honours")) %>%
+              mutate(beforeAfter = factor(beforeAfter, levels = c("before Honours","on or after honours"))) %>%
+  group_by(beforeAfter) %>% 
+        filter(!is.na(beforeAfter)) %>% 
+  add_tally(name="split") %>% 
+        mutate(prop = split/total) %>% 
+        group_by(beforeAfter, prop) %>% 
+        tally()
+  
+prePostChart1ExcOld <- ggplot(prePostAwardSumExcOld, aes(beforeAfter, prop)) +
+        geom_col(fill="#2d4059") +
+  custom_theme +
+        scale_y_continuous(labels = percent)+
+           labs(title="Years Difference between honour and page (only those with award on or post 2001)", 
+             x="Years Difference ", y="Number of recipients")
+
+        
+
+ggplotly(prePostChart1ExcOld, tooltip="prop") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.1, text = "All Recipients with page, honour post WP n=2528", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10))) 
+```
+
+For those who received their award after the start of wikipedia, across most honour levels, the majority had their page created before they received their honour.
+
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+prePostAwardSumExcOldLevels <- wikipedia %>% 
+        filter(firstAwardDate>"2001-01-15") %>% 
+        select(name, timeDiff, awardComb) %>%
+        add_tally(name="total") %>% 
+  mutate(beforeAfter = case_when(timeDiff >=0 ~ "on or after honours",
+                                 timeDiff<0 ~ "before Honours")) %>%
+              mutate(beforeAfter = factor(beforeAfter, levels = c("before Honours","on or after honours"))) %>%
+        ungroup() %>% 
+        group_by(beforeAfter) %>% 
+        add_tally(name="splitTotal") %>% 
+        group_by(awardComb) %>% 
+        add_tally(name="awardTotal") %>%
+  group_by(awardComb, beforeAfter) %>% 
+        filter(!is.na(beforeAfter)) %>% 
+        add_tally(name="awardSplit") %>% 
+        mutate(totalProp = splitTotal/total) %>% 
+        mutate(awardProp = awardSplit/awardTotal) %>%
+        group_by(awardComb, beforeAfter, awardProp) %>% 
+        summarise(n())
+       
+
+          
+  
+prePostChart1ExcOldLevels <- ggplot(prePostAwardSumExcOldLevels, aes(beforeAfter, awardProp, text=percent(awardProp))) +
+        geom_col(fill="#2d4059") +
+  custom_theme +
         facet_wrap(~awardComb)+
-  custom_theme +
-  labs(title="Number of pages created pre / post award 1975 - 2020 by honour level") +
-  scale_colour_manual(values=colours)
+        scale_y_continuous(labels = percent)+
+        labs(title="Page created pre or post honour by honour level (all honours post WP)", 
+             x="Years Difference ", y="Number of recipients")
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+t <- list(
+  family = "Helvetica",
+  size = 14)
 
 
-
-slopeDataWP <- wpData %>% 
-        select(honourYear, pageYear, prePost, gender, awardComb) %>% 
-  filter(honourYear >2000)
-
-
-ggparcoord(slopeDataWP, columns = 1:2, groupColumn="prePost", alphaLines = 0.04) +
-  custom_theme +
-  labs(title="Number of pages created pre / post award 2001- 2020") +
-  scale_colour_manual(values=colours)
-  
+chart11 <- ggplotly(prePostChart1ExcOldLevels, tooltip="text") 
         
-ggparcoord(slopeDataWP, columns = 1:2, groupColumn="prePost", alphaLines = 0.05) +
-        facet_wrap(~gender) +
-    custom_theme +
-  labs(title="Number of pages created pre / post award 2001- 2020 by gender") +
-  scale_colour_manual(values=colours)
+        
+chart11[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+chart11[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
 
 
-ggparcoord(slopeDataWP, columns = 1:2, groupColumn="prePost", alphaLines = 0.05) +
-        facet_wrap(~awardComb)+
-      custom_theme +
-  labs(title="Number of pages created pre / post award 2001- 2020 by honour level") +
-  scale_colour_manual(values=colours)
 
+chart11 %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.15, text = "All Recipients with page, honour post WP n=2528", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+         autosize=F,
+         width=800, 
+         height=500,
+         margin=m)    
 ```
 
-### Days 
 
-```{r echo=FALSE, message=FALSE}
-timeData <- wpData %>% 
-        filter(wikipediaPage=="Yes" & prePost!="No wiki")  %>% 
-        select(daysDiff, gender, awardComb) 
+The below chart hows the perecentage difference in the proportion for those who had their page created before receiving their honours and those who 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 
-timeDataWP <- wpData %>% 
-        filter(wikipediaPage=="Yes" & prePost!="No wiki")  %>% 
-  filter(honourYear>2000) %>% 
-        select(daysDiff, gender, awardComb) 
+prePostprePostAwardSumExcOldLevelsDiff <- prePostAwardSumExcOldLevels %>% 
+        # filter(awardComb!="ADK") %>% 
+        group_by(awardComb) %>% 
+        mutate(prePostDiff = (lead(awardProp)-awardProp)/awardProp)
 
-
-ggplot(timeData, aes(daysDiff)) +
-        geom_histogram(binwidth = 500) +
+prePostprePostAwardSumExcOldLevelsDiffChart <- ggplot(prePostprePostAwardSumExcOldLevelsDiff, aes(awardComb, prePostDiff, text=percent(prePostDiff))) +
+        geom_col(fill="#2d4059") +
   custom_theme +
-  labs(title="Days difference between Honour and page creation 1975 - 2020 ") +
-  scale_fill_manual(values=colours)
-  
-
-ggplot(timeDataWP, aes(daysDiff)) +
-        geom_histogram(binwidth = 500) +
-  custom_theme +
-  labs(title="Days difference between Honour and page creation 2001 - 2020 ") +
-  scale_fill_manual(values=colours)
+        scale_y_continuous(labels = percent)+
+        labs(title="Difference preHonour v postHonour in wikipedia page creation (all honours post WP)", 
+             x="Years Difference ", y="Number of recipients")
 
 
-ggplot(timeData, aes(daysDiff)) +
-        geom_histogram(binwidth = 500) +
-        facet_grid(gender~awardComb)  +
-  custom_theme +
-  labs(title="Days difference between Honour and page creation 1975 - 2020 by Gender ") +
-  scale_fill_manual(values=colours)
+chart10 <- ggplotly(prePostprePostAwardSumExcOldLevelsDiffChart, tooltip="text") 
+        
+        
+chart10[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+chart10[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
 
-
-
-ggplot(timeDataWP, aes(daysDiff)) +
-        geom_histogram(binwidth = 500) +
-        facet_grid(gender~awardComb)  +
-  custom_theme +
-  labs(title="Days difference between Honour and page creation 2001 - 2020 by gender") +
-  scale_fill_manual(values=colours)
-
-
-
-ggplot(timeData, aes(daysDiff, after_stat(count), group=gender, fill=gender)) +
-        geom_density(alpha=0.5)  +
-        facet_grid(~awardComb) +
-    custom_theme +
-  labs(title="Days difference between Honour and page creation 1975 - 2020 by gender") +
-  scale_fill_manual(values=coloursGender)
-
-ggplot(timeDataWP, aes(daysDiff, after_stat(count), group=gender, fill=gender)) +
-        geom_density(alpha=0.5)  +
-        facet_grid(~awardComb) +
-    custom_theme +
-  labs(title="Days difference between Honour and page creation 2001 - 2020 by gender") +
-  scale_fill_manual(values=coloursGender)
-
+chart10 %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.15, text = "All Recipients with page, honour post WP n=2528", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
 
 
 ```
 
-### Arc plots 1975 - 2020
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
-```{r echo=FALSE, message=FALSE, fig.width=12}
-
-arcData <- wpData %>% 
-        select(honourDate, pageCreation, prePost, gender, awardComb) %>% 
-        mutate (from = year(honourDate),
-                to = year(pageCreation)) %>% 
-        # slice_sample(n = 2) %>% 
-        group_by(from, to, gender, awardComb, prePost) %>% 
-        tally()  %>% 
-        rename(weight=n) %>% 
-        na.omit()
-
-
-arcPlot <- tbl_graph(edges=arcData, directed=TRUE)
-
-
-
-
-ggraph(arcPlot, layout = 'linear') +
-        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) 
-
-ggraph(arcPlot, layout = 'linear') +
-        geom_edge_arc(aes(colour=awardComb), alpha=.3, width=.2) 
-
-
+prePostAwardYearGender <- wikipedia %>% 
+        select(timeDiff, gender) %>%
+        group_by(gender) %>% 
+        filter(gender!="U") %>% 
+               add_tally(name="total") %>%
+  mutate(beforeAfter = case_when(timeDiff >=0 ~ "on or after honours",
+                                 timeDiff<0 ~ "before Honours")) %>%
+              mutate(beforeAfter = factor(beforeAfter, levels = c("before Honours","on or after honours"))) %>%
+  group_by(beforeAfter, gender) %>% 
+        filter(!is.na(beforeAfter)) %>% 
+        add_tally(name="split") %>% 
+        mutate(prop = split/total) %>% 
+        group_by(beforeAfter, gender,prop) %>% 
+        tally()
+        
+prePostAwardYearGenderChart <- ggplot(prePostAwardYearGender, aes(gender, prop, fill=gender, text=percent(prop))) +
+        geom_bar(position="stack", stat="identity") +
+        scale_fill_manual(values=coloursGender)+
+        custom_theme+
+        facet_wrap(~beforeAfter)+
+        scale_y_continuous(labels = percent)+
+        labs(title="Diff in gender preHonour v postHonour in wikipedia page creation (all honours post WP)", 
+             x="Gender split by before / on or after honours", y="Proportion of recipients")
 
         
+chart14 <- ggplotly(prePostAwardYearGenderChart, tooltip="text") 
 
-ggraph(arcPlot, layout = 'linear') +
-        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
-        facet_wrap(~gender)
+chart14[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+chart14[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
 
-ggraph(arcPlot, layout = 'linear') +
-        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
-        facet_grid(~awardComb) +
-  
-
-```
-
-### arc plots 2001 - 2020
-
-```{r echo=FALSE, message=FALSE, fig.width=12}
-arcDataWP <- wpData %>% 
-  filter(honourYear>2000) %>% 
-        select(honourDate, pageCreation, prePost, gender, awardComb) %>% 
-        mutate (from = year(honourDate),
-                to = year(pageCreation)) %>% 
-        # slice_sample(n = 2) %>% 
-        group_by(from, to, gender, awardComb, prePost) %>% 
-        tally()  %>% 
-        rename(weight=n) %>% 
-        na.omit()
-
-arcPlotWP <- tbl_graph(edges=arcDataWP, directed=TRUE)
-ggraph(arcPlotWP, layout = 'linear') +
-        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) 
-
-ggraph(arcPlotWP, layout = 'linear') +
-        geom_edge_arc(aes(colour=awardComb), alpha=.3, width=.2) 
-ggraph(arcPlotWP, layout = 'linear') +
-        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
-        facet_wrap(~gender)
-
-ggraph(arcPlotWP, layout = 'linear') +
-        geom_edge_arc(aes(colour=gender), alpha=.3, width=.2) +
-        facet_grid(~awardComb)
+chart14 %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page, honour post WP n=2528", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
 
 
 ```
 
+### Rate of Wikipedia page creation over time 
 
-Extra things to run if there is time:
+The below chart shows a cumulative total of wikipedia pages created for those who hold an Order of Australia over time. There is a significant jump in cumulative page creation around 2005, and another visible jump around 2011.
 
-Looking at all one award v all multiple awards to see if the "very emminent" (indicted by multiple awards) looks any different to those with one award in terms of age creation. Greater rate of page creation etc?
 
-Honourary recipients and WP pages
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+cumPageDiff <- wikipedia %>% 
+       select(WPDate) %>% 
+        group_by(WPDate) %>% 
+        tally(name="total") %>% 
+        mutate(cumPages = cumsum(total)) %>% 
+        mutate(cumpagesDiff = total - first(total), 
+               cumpagesDiffPercent = cumpagesDiff/ - first(total)*100)
+
+
+
+cumPageChart <- ggplot(cumPageDiff, aes(WPDate, cumPages, group=1, text=paste(WPDate,":",cumPages))) +
+       
+        geom_line(colour="#2d4059") +
+        # geom_smooth()+
+        # scale_fill_manual(values=colours)+
+        custom_theme+
+        # scale_y_continuous(labels = percent)+
+        labs(title="Daily cumulative page creation of honours recipients", 
+             x="Date of Page creation", y="Number of pages")
+
+
+m <- list(
+  l = 80,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+ggplotly(cumPageChart, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
+```
+
+In order to see the peaks and drops more clearly, pages have been aggregated to a year level. Using yearly numbers and adding in a trend line, we can see that 2005 and 2006 saw an above-average moment in page creation, and smaller ones in 2011, and 2014.  There has been though, a genera decline since the peak of page creation in 2005-2006.
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+cumPageYearDiff <- wikipedia %>% 
+       select(wikipediaYear) %>% 
+        group_by(wikipediaYear) %>% 
+        filter(!is.na(wikipediaYear)) %>% 
+        tally(name="total") %>% 
+        ungroup() %>% 
+        mutate(cumPages = cumsum(total)) %>% 
+        mutate(pagesDiffStart = total - first(total), 
+               # cumpagesDiffPercent = cumpagesDiff/ first(total)*100,
+               cumpagesDiffPercentYOY = (total- lag(total))/lag(total))
+
+cumPageChartYear <- ggplot(cumPageYearDiff, aes(wikipediaYear, total, text=paste(wikipediaYear,": ", total), group=1)) +
+        geom_smooth()+
+         geom_line(colour="#2d4059", width=2) +
+        # geom_smooth()+
+        # scale_fill_manual(values=colours)+
+        custom_theme+
+        # scale_y_continuous(labels = percent)+
+        labs(title="Yearly cumulative page creation with trend line", 
+             x="Date of Page creation", y="Number of pages")
+
+m <- list(
+  l = 80,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+ggplotly(cumPageChartYear, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
+
+```
+
+The chart below compares each year to the start year. Between 2001, and 2002 there was in increase in 22 pages, between 2001 and 2013 a difference of 124 etc. It shows how over time, there are fewer pages being created each year. (Please note that 2020 is an incomplete year in the data set).  
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+cumPageChartYearDiffStart <- ggplot(cumPageYearDiff, aes(wikipediaYear, pagesDiffStart, group=1, text=paste("2001 v",wikipediaYear,":", pagesDiffStart))) +
+        custom_theme+
+        labs(title="Pages created in year one versus consecutive years", 
+             x="Date of Page creation", y="Difference in number of pages")+
+        geom_col(fill="#2d4059")
+
+m <- list(
+  l = 80,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+ggplotly(cumPageChartYearDiffStart, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
+        
+```
+
+Looking at the percentage difference year on year in page creation, the last five years has seen a flattening of the creation of new pages of thsoe who have received an Australian Honours.  
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+cumPageChartYearDiffYOY <- ggplot(cumPageYearDiff, aes(wikipediaYear, cumpagesDiffPercentYOY, text=paste(wikipediaYear,":",percent (cumpagesDiffPercentYOY)))) +
+        geom_col(fill="#2d4059")+
+        custom_theme+
+        labs(title="Page creation difference Year on Year", 
+             x="Date of Page creation", y="% Difference in number of pages")+
+        scale_y_continuous(labels = percent)
+        
+
+ggplotly(cumPageChartYearDiffYOY, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
+        
+
+
+
+
+```
+
+There is potential that there are less pages being created for those with an honours because there are less people receiving honours over time. The chart below shows total honours issued since 1975, and apart from a few periods where the rate dips below the average, there is an increae in the nuber of honours being granted every year. 
+
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+awardRate <- allDataAnonRemoved %>% 
+        select(honoursYear) %>% 
+        filter(!is.na(honoursYear)) %>% 
+        group_by(honoursYear) %>% 
+        tally(name="totalAwards") %>% 
+        mutate(cumYear = cumsum(totalAwards)) %>% 
+        ungroup() %>% 
+        mutate(diffYearOne = totalAwards-first(totalAwards)) %>% 
+        mutate(YOYDiff = (totalAwards - lag(totalAwards))/lag(totalAwards))
+        
+ggplot(awardRate, aes(honoursYear, totalAwards)) +
+        geom_line() +
+        geom_smooth()
+
+```
+
+Cumulative awards
+
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(awardRate, aes(honoursYear, cumYear)) +
+        geom_line() 
+
+```
+
+Compared to Year One of the honors system, in 2019 there was a difference of 2066 awards. With the two main honours events already completed in 2020, we can assume that the majority of honours have been awarded already.  This means that 2020 has seen a drop in the numbers of awards issued.
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(awardRate, aes(honoursYear, diffYearOne)) +
+        geom_line() +
+        geom_smooth()
+
+```
+
+
+Year on Year differences sees a trend line that is generally flat from 2000 onwards, with the 2000+ awards being issued in 2019 giving the trend line a nudge up. 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(awardRate, aes(honoursYear, YOYDiff)) +
+        geom_col() +
+        geom_smooth()
+
+```
+
+Focussing though only on the honours issued since the start of 2001, the overall trend of the number of honours being awarded each year is an increase, not a decrease in potentials for a page. 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+awardRateWPTimeOnly <- allDataAnonRemoved %>% 
+        select(honoursYear, honoursDate) %>% 
+        filter(!is.na(honoursYear)) %>% 
+        filter(honoursDate >= "2001-01-15") %>% 
+        group_by(honoursYear) %>% 
+        tally(name="totalAwards") %>% 
+        mutate(cumYear = cumsum(totalAwards)) %>% 
+        ungroup() %>% 
+        mutate(diffYearOne = totalAwards-first(totalAwards)) %>% 
+        mutate(YOYDiff = (totalAwards - lag(totalAwards))/lag(totalAwards))
+
+
+ggplot(awardRateWPTimeOnly, aes(honoursYear, totalAwards)) +
+        geom_line() +
+        geom_smooth()
+
+```
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+ggplot(awardRateWPTimeOnly, aes(honoursYear, cumYear)) +
+        geom_line() 
+
+```
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(awardRateWPTimeOnly, aes(honoursYear, diffYearOne)) +
+        geom_line() +
+        geom_smooth()
+
+```
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(awardRateWPTimeOnly, aes(honoursYear, YOYDiff)) +
+        geom_col() +
+        geom_smooth()
+```
+
 
