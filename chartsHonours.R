@@ -175,22 +175,77 @@ multipleWP_List <- allDataBig %>%
 
 
 ##fixing dates of multiple award holders
+View(multiple_awards_fix)
 
-multiple_awards_fix <- allDataBig %>% 
+recipientData <- allDataBig %>% 
         filter(fullName != "Anonymous") %>% 
         mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
-        arrange(name, dateAwarded) %>% 
-        filter(wikipediaPage =="Yes") %>% 
-        # select(name, dateAwarded, pageCreation, AwardAbbr, daysDiff) %>%
+        arrange(name, honourDate) %>% 
         group_by(name) %>% 
         add_tally() %>% 
         # filter(n>1) %>%
+        mutate(firstAwardDate = min(honourDate)) %>% 
+        mutate(highestAward1 = case_when(awardComb == "OAM" ~1,
+                                        awardComb == "AM" ~2,
+                                        awardComb == "AO" ~3,
+                                        awardComb == "AC" ~4,
+                                        awardComb == "AKD" ~5)) %>% 
+        mutate(highestAward2 = max(highestAward1)) %>% 
+        mutate(highestAward = case_when(highestAward2 == 1 ~"OAM",
+                                        highestAward2 == 2 ~"AM" ,
+                                        highestAward2 == 3~"AO",
+                                        highestAward2 == 4~"AC",
+                                        highestAward2 == 5 ~"AKD")) %>% 
+        filter(highestAward1 == max(highestAward1)) %>% 
+        mutate(daysDiff = pageCreation - firstAwardDate) %>% 
+        mutate(daysDiff = str_remove(daysDiff, "days")) %>% 
+        mutate(daysDiff = as.numeric(daysDiff)) %>% 
+        select(wikipediaPage:pageCreation, firstAwardDate, daysDiff:highestAward) %>% 
+        mutate(honourYear = year(firstAwardDate)) %>% 
+        mutate(pageYear = year(pageCreation)) %>% 
+        mutate(prePost = case_when(daysDiff >=0 ~ "Post",
+                                   daysDiff < 0 ~ "Pre")) %>% 
+        select(wikipediaPage:prePost, honourYear, pageYear, AwardAbbr:highestAward)
+
+
+levelTest <- recipientData %>% 
+        ungroup() %>% 
+        # filter(honourYear >2000) %>% 
+        select(awardComb) %>% 
+        group_by(awardComb) %>% 
+        tally()
+
+multipleList <- allDataBig %>% 
+        filter(fullName != "Anonymous") %>% 
+        mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
+        arrange(name, dateAwarded) %>% 
+        group_by(name) %>% 
+        add_tally()
+        
+        select(wikipediaURL, name2) %>% 
+        group_by(wikipediaURL, name2) %>% 
+        tally() %>% 
+        filter(n>1) 
+
+
+
+
+multiple_awards_fix2 <- allDataBig %>% 
+        # filter(fullName != "Anonymous") %>% 
+        mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
+        arrange(name, dateAwarded) %>% 
+        # filter(wikipediaPage =="Yes") %>% 
+        # select(name, dateAwarded, pageCreation, AwardAbbr, daysDiff) %>%
+        group_by(name) %>% 
+        tally() %>% 
+        arrange(desc(n))
+        # filter(n>1) %>%
         mutate(firstAwardDate = min(dateAwarded)) %>% 
-        mutate(highestAward1 = case_when(AwardAbbr == "OAM" ~1,
-                                        AwardAbbr == "AM" ~2,
-                                        AwardAbbr == "AO" ~3,
-                                        AwardAbbr == "AC" ~4,
-                                        AwardAbbr == "ADK" ~5)) %>% 
+        mutate(highestAward1 = case_when(awardComb == "OAM" ~1,
+                                         awardComb == "AM" ~2,
+                                         awardComb == "AO" ~3,
+                                         awardComb == "AC" ~4,
+                                         awardComb == "ADK" ~5)) %>% 
         mutate(highestAward2 = max(highestAward1)) %>% 
         mutate(highestAward = case_when(highestAward2 == 1 ~"OAM",
                                         highestAward2 == 2 ~"AM" ,
@@ -206,8 +261,8 @@ multiple_awards_fix <- allDataBig %>%
         mutate(pageYear = year(pageCreation)) %>% 
         mutate(prePost = case_when(daysDiff >=0 ~ "Post",
                                    daysDiff < 0 ~ "Pre")) %>% 
-        select(wikipediaPage:prePost, honourYear, pageYear, AwardAbbr:highestAward)
-
+        select(wikipediaPage:prePost, honourYear, pageYear, AwardAbbr:highestAward) %>% 
+        tally()
 
 
         
@@ -215,6 +270,7 @@ multiple_awards_fix <- allDataBig %>%
 
 
 View(multiple_awards_fix)
+View(multiple_awards_fix2)
 View(allDataBig)
 
 
@@ -235,10 +291,29 @@ awardSummaryTotal <- allDataBig %>%
         group_by(awardComb) %>%
         tally()
 
-awardSummaryDivision <- allDataBig %>%
+awardSummaryDivisionTally <- allDataBig %>%
         select(awardComb, division) %>%
         group_by(awardComb, division) %>%
         tally()
+
+divisionSummary <- ggplot(awardSummaryDivisionTally, aes(division, awardComb, size=n)) +
+        geom_point(color="#515BA5") +
+        scale_x_discrete(position = "top") +
+        scale_size(range = c (1, 20))
+        
+
+
+t <- list(
+        family = "Helvetica",
+        size = 14)
+
+ggplotly(divisionSummary, tooltip="n") %>% 
+        layout(font=t,
+               annotations = 
+                       list(x = 1, y = -0.1, text = "total number of awards n=41,816", 
+                            showarrow = F, xref='paper', yref='paper', 
+                            xanchor='right', yanchor='auto', xshift=1, yshift=2,
+                            font=list(size=10))) 
 
 View(awardSummaryDivision)
 
@@ -575,8 +650,75 @@ difference <- smallData %>%
         
         
         
+recipient <- allDataBigAnonRemoved %>% 
+        mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
+        select(-dateAwarded) %>% 
+        arrange(name, honourDate) %>% 
+        group_by(name) %>% 
+        add_tally() %>% 
+        mutate(firstAwardDate = min(honourDate)) %>% 
+        mutate(highestAward1 = case_when(awardComb == "OAM" ~1,
+                                         awardComb == "AM" ~2,
+                                         awardComb == "AO" ~3,
+                                         awardComb == "AC" ~4,
+                                         awardComb == "AKD" ~5)) %>% 
+        mutate(highestAward2 = max(highestAward1)) %>% 
+        mutate(highestAward = case_when(highestAward2 == 1 ~"OAM",
+                                        highestAward2 == 2 ~"AM" ,
+                                        highestAward2 == 3~"AO",
+                                        highestAward2 == 4~"AC",
+                                        highestAward2 == 5 ~"AKD")) %>% 
+        filter(highestAward1 == max(highestAward1)) %>% 
+        mutate(daysDiff = pageCreation - firstAwardDate) %>% 
+        mutate(daysDiff = str_remove(daysDiff, "days")) %>% 
+        mutate(daysDiff = as.numeric(daysDiff)) %>% 
+        select(wikipediaPage:pageCreation, firstAwardDate, daysDiff:highestAward) %>% 
+        mutate(honourYear = year(firstAwardDate)) %>% 
+        mutate(pageYear = year(pageCreation)) %>% 
+        mutate(prePost = case_when(daysDiff >=0 ~ "Post",
+                                   daysDiff < 0 ~ "Pre")) %>% 
+        select(wikipediaPage:prePost, honourYear, pageYear, AwardAbbr:highestAward)
 
+write.csv(recipient, "recipient.csv")
+
+View(recipient)
+
+multipleHonoursList <- allDataAnonRemoved %>% 
+        mutate(name = ifelse(!is.na(name), name, fullName)) %>% 
+        arrange(name, dateAwarded) %>% 
+        group_by(name) %>% 
+        tally() %>% 
+        filter(n>1) 
 
         
+propAll <- recipient %>% 
+        select(wikipediaPage) %>% 
+        add_tally() %>% 
+        rename(total =n) %>% 
+        group_by(wikipediaPage, total) %>% 
+        tally() %>% 
+        mutate(prop = n/total)
 
+
+propAward <- recipient %>% 
+        select(wikipediaPage, awardComb) %>% 
+        group_by()
+
+ggplot(propAll, aes(wikipediaPage, prop, fill=wikipediaPage)) +
+        geom_col()+
+        labs(title="11% of all Honours recipients have a wikipedia page",
+             x="Have wikipedia Page", y="Proportion of recipients") +
+        scale_fill_manual(values=colours)+
+        scale_y_continuous(labels = percent)+
+        custom_theme
+
+
+checkRecipients <- recipient %>% 
+        nrow()
+
+genderCheck <- recipient %>% 
+        select(gender) %>% 
+        group_by(gender) %>% 
+        # filter(gender !="U") %>% 
+        tally()
 

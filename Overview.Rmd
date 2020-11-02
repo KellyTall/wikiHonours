@@ -671,7 +671,7 @@ ggplotly(percdiffChartBYAWARD, tooltip="text") %>%
 
 #### State and proportions of awards
 
-There is slightly more ACT recipients who have a wikipedia page compared to other states (higher rate of politicians and public servants who receievd awards?). The higher proportion of "other" relates to the honourary award recipients referred to above, who are internationally eminent and would be more likely to ahve a WP page whether they have an Australian honour or not.    .   
+There is slightly more ACT recipients who have a wikipedia page compared to other states (higher rate of politicians and public servants who receievd awards?). The higher proportion of "other" relates to the honourary award recipients referred to above, who are internationally eminent and would be more likely to have a WP page whether they have an Australian honour or not.  
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -710,7 +710,7 @@ t <- list(
 ggplotly(pagePropStateChart, tooltip="text") %>% 
   layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.1, text = "All Recipients n=41,337", 
+           list(x = 1, y = -0.15, text = "All Recipients n=41,337", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -719,17 +719,11 @@ ggplotly(pagePropStateChart, tooltip="text") %>%
          height=500,
          margin=m) 
 
-
-
-# pagePropStateChartAward <- ggplot(pagePropStateAward, aes(awardComb, prop, fill=wikipediaPage, text=percent(prop))) +
-#         geom_bar(position="fill", stat="identity") +
-#         custom_theme+
-#         labs(title="Proportion of award recipients that have a wikipedia article page by state", 
-#              x="Order of Australia (membership levels)", y="Proportion of recipients") +
-#         scale_y_continuous(labels = percent)+
-#         scale_fill_manual(values=colours)+
-#         facet_wrap(~state)
 ```
+
+<div style="margin-bottom:40px;">
+</div>
+
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -785,7 +779,9 @@ chart6 %>% layout(font=t,
 
 ```
 
-The below chart shows all recipeints with a wikipedia page (exclusing Knights and Dames does to low sample size and all from "Other" location). The line represents the national average for each award level, showing states with above or below average performance.
+<div style="margin-bottom:40px;">
+</div>
+The below chart shows all recipients with a wikipedia page.  The line represents the national average for each award level, showing states with above or below average performance. (*Dames and Knights and Other Locations have been excluded)
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -1005,7 +1001,7 @@ ggplotly(prePostChart, tooltip="text") %>%
 
 #### Page or Award - what comes first?
 
-The below chart shows the distrubtion of wikipedia page creation over time. The bars left of zero represent all whose page was created <i>before</i> they received an award. All those to the right of zero represent all whose page was created <i>after</i> they receievd an award
+The below chart shows the distrubtion of wikipedia page creation over time. Zero represents the year the honors was receievd. The bars left of zero represent all whose page was created <i>before</i> they received an award. All those to the right of zero represent all whose page was created <i>after</i> they receievd an award
 
 The distribution of the chart below shows based on all recipeints, there are more pages created after someone has received an award, than before. 
 
@@ -1040,10 +1036,10 @@ ggplotly(yearDiffChart, tooltip="text") %>%
          title = list(text = paste0('Difference in time beween award and wikipedia page creation',
                                     '<br>',
                                     '<sup>',
-                                    'Negative numbers are those who have page created <i>before</i> honour, and postive have page created <i>after</> honour',
+                                    'Negative numbers are those who have page created <i>before</i> honour, and postive have page created <i>after</i> honour',
                                     '</sup>')),
          annotations = 
-           list(x = 1, y = -0.15, text = "All Recipients with wikipedia page n=4423", 
+           list(x = 1, y = -0.13, text = "All Recipients with wikipedia page n=4423", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1107,7 +1103,7 @@ m <- list(
 ggplotly(yearDiffPrePostChartFilter, tooltip="text") %>% 
   layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.15, text = "All Recipients w. WP page receiving award post-wikipedia n=2528", 
+           list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving award post-wikipedia n=2528", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1163,7 +1159,11 @@ ggplotly(prePostChart1ExcOld, tooltip="text") %>%
                 font=list(size=10))) 
 ```
 
-For those who received their award after the start of wikipedia, across most honour levels, the majority had their page created before they received their honour.
+
+<div style="margin-bottom:40px;">
+</div>
+
+For those who received their award after the start of wikipedia, across most honour levels, the majority had their page created <i>before</i> they received their honour.
 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1173,9 +1173,9 @@ prePostAwardSumExcOldLevels <- wikipedia %>%
         filter(firstAwardDate>"2001-01-15") %>% 
         select(name, timeDiff, awardComb) %>%
         add_tally(name="total") %>% 
-  mutate(beforeAfter = case_when(timeDiff >=0 ~ "on or after honours",
-                                 timeDiff<0 ~ "before Honours")) %>%
-              mutate(beforeAfter = factor(beforeAfter, levels = c("before Honours","on or after honours"))) %>%
+  mutate(beforeAfter = case_when(timeDiff >=0 ~ "on/after Hons",
+                                 timeDiff<0 ~ "before Hons")) %>%
+              mutate(beforeAfter = factor(beforeAfter, levels = c("before Hons","on/after Hons"))) %>%
         ungroup() %>% 
         group_by(beforeAfter) %>% 
         add_tally(name="splitTotal") %>% 
@@ -1273,9 +1273,10 @@ chart10 %>% layout(font=t,
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 prePostAwardYearGender <- wikipedia %>% 
+  filter(firstAwardDate>"2001-01-15") %>% 
+  filter(gender!="U") %>% 
         select(timeDiff, gender) %>%
         group_by(gender) %>% 
-        filter(gender!="U") %>% 
                add_tally(name="total") %>%
   mutate(beforeAfter = case_when(timeDiff >=0 ~ "on or after honours",
                                  timeDiff<0 ~ "before Honours")) %>%
@@ -1304,7 +1305,7 @@ chart14[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
 
 chart14 %>% layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page, honour post WP n=2528", 
+           list(x = 1, y = -0.2, text = "All Recipients with WP page, honour post WP w gender n=2525", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1356,7 +1357,7 @@ m <- list(
 ggplotly(cumPageChart, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Recipients with WP page n=4423", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1403,7 +1404,7 @@ m <- list(
 ggplotly(cumPageChartYear, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Recipients with WP page n=4423", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1435,7 +1436,7 @@ m <- list(
 ggplotly(cumPageChartYearDiffStart, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Recipients with WP page n=4423", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1460,7 +1461,7 @@ cumPageChartYearDiffYOY <- ggplot(cumPageYearDiff, aes(wikipediaYear, cumpagesDi
 ggplotly(cumPageChartYearDiffYOY, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Recipients with WP page n=4423", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1502,7 +1503,7 @@ scale_colour_manual(values=colours)
 ggplotly(awardRateChart, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours Anon Removed n=41754", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1526,7 +1527,7 @@ awardRateChart1 <- ggplot(awardRate, aes(honoursYear, cumYear, text=paste(honour
 ggplotly(awardRateChart1, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours Anon Removed n=41754", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1551,7 +1552,7 @@ awardRateChart3 <- ggplot(awardRate, aes(honoursYear, diffYearOne, text=paste(ho
 ggplotly(awardRateChart3, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours Anon Removed n=41754", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1576,7 +1577,7 @@ awardRateChart5 <- ggplot(awardRate, aes(honoursYear, YOYDiff, text=paste(lag(ho
 ggplotly(awardRateChart5, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours Anon Removed n=41754", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1613,7 +1614,7 @@ awardRateWPTimeOnlyChart1 <- ggplot(awardRateWPTimeOnly, aes(honoursYear, totalA
 ggplotly(awardRateWPTimeOnlyChart1, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours since WP, Anon Removed n=25005", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1642,7 +1643,7 @@ awardRateWPTimeOnlyChart3 <- ggplot(awardRateWPTimeOnly, aes(honoursYear, diffYe
 ggplotly(awardRateWPTimeOnlyChart3, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours since WP, Anon Removed n=25005",
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1670,7 +1671,7 @@ awardRateWPTimeOnlyChart4 <- ggplot(awardRateWPTimeOnly, aes(honoursYear, YOYDif
 ggplotly(awardRateWPTimeOnlyChart4, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours since WP, Anon Removed n=25005",
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1711,7 +1712,7 @@ propPagesOverTimeChart1 <- ggplot(propPagesOverTime, aes(honoursYear, totalByPag
 ggplotly(propPagesOverTimeChart1, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours Anon Removed n=41754", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1740,7 +1741,7 @@ propPagesOverTimeChart2 <- ggplot(propPagesOverTime, aes(honoursYear, yearProp, 
 ggplotly(propPagesOverTimeChart2, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours Anon Removed n=41754", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1784,7 +1785,7 @@ awardRateGenderChart1 <- ggplot(awardRateGender, aes(honoursYear, totalAwards, g
 ggplotly(awardRateGenderChart1, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours Anon Removed n=41754", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1811,7 +1812,7 @@ awardRateGenderChart2 <- ggplot(awardRateGender, aes(honoursYear, awardProp, gro
 ggplotly(awardRateGenderChart2, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+           list(x = 1, y = -0.2, text = "All Honours Anon Removed n=41754", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
