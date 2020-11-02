@@ -1383,13 +1383,13 @@ cumPageYearDiff <- wikipedia %>%
                cumpagesDiffPercentYOY = (total- lag(total))/lag(total))
 
 cumPageChartYear <- ggplot(cumPageYearDiff, aes(wikipediaYear, total, text=paste(wikipediaYear,": ", total), group=1)) +
-        geom_smooth()+
+        geom_smooth(method=lm, level=0.90, alpha=0.3, size=.5)+
          geom_line(colour="#2d4059", width=2) +
         # geom_smooth()+
         # scale_fill_manual(values=colours)+
         custom_theme+
         # scale_y_continuous(labels = percent)+
-        labs(title="Yearly cumulative page creation with trend line", 
+        labs(title="Yearly page creation", 
              x="Date of Page creation", y="Number of pages")
 
 m <- list(
@@ -1490,19 +1490,50 @@ awardRate <- allDataAnonRemoved %>%
         mutate(diffYearOne = totalAwards-first(totalAwards)) %>% 
         mutate(YOYDiff = (totalAwards - lag(totalAwards))/lag(totalAwards))
         
-ggplot(awardRate, aes(honoursYear, totalAwards)) +
-        geom_line() +
-        geom_smooth()+
-  custom_theme
+awardRateChart <- ggplot(awardRate, aes(honoursYear, totalAwards, text=paste(honoursYear, ":", totalAwards), group=1)) +
+        geom_smooth(method=lm, level=0.95, alpha=0.3, size=.5)+
+  geom_line(colour="#2d4059") +
+  custom_theme+
+  labs(title="Number of Orders of Australia awarded each year", 
+             x="Year of Honours Awarded", y="Number of Honours Awarded")+
+scale_colour_manual(values=colours)
+  
+
+ggplotly(awardRateChart, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)     
 
 ```
 
-Cumulative awards
+The cumulative awards appears steady, but with exponential growth. 
 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(awardRate, aes(honoursYear, cumYear)) +
-        geom_line() 
+awardRateChart1 <- ggplot(awardRate, aes(honoursYear, cumYear, text=paste(honoursYear,":", cumYear), group=1)) +
+        geom_line(colour="#2d4059") +
+  labs(title="Cumulative Number of Orders of Australia awarded each year", 
+             x="Year of Honours Awarded", y="Cumulative Number of Honours Awarded")+
+  custom_theme
+
+ggplotly(awardRateChart1, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)    
 
 ```
 
@@ -1510,9 +1541,24 @@ Compared to Year One of the honors system, in 2019 there was a difference of 206
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
-ggplot(awardRate, aes(honoursYear, diffYearOne)) +
-        geom_line() +
-        geom_smooth()
+awardRateChart3 <- ggplot(awardRate, aes(honoursYear, diffYearOne, text=paste(honoursYear, "-",first(honoursYear),":", diffYearOne), group=1)) +
+        geom_line(colour="#2d4059") +
+        geom_smooth(level=0.99, alpha=0.3, size=.5)+
+  labs(title="Growth compared to Year One", 
+             x="Year of Honours Awarded", y="Number of Honours Awarded")+
+  custom_theme
+
+ggplotly(awardRateChart3, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
 
 ```
 
@@ -1520,9 +1566,24 @@ ggplot(awardRate, aes(honoursYear, diffYearOne)) +
 Year on Year differences sees a trend line that is generally flat from 2000 onwards, with the 2000+ awards being issued in 2019 giving the trend line a nudge up. 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(awardRate, aes(honoursYear, YOYDiff)) +
-        geom_col() +
-        geom_smooth()
+awardRateChart5 <- ggplot(awardRate, aes(honoursYear, YOYDiff, text=paste(lag(honoursYear),"v",honoursYear,":",percent(YOYDiff) ))) +
+        geom_col(fill="#2d4059") +
+  custom_theme+ 
+  scale_y_continuous(labels = percent)+
+  labs(title="Year on Year Growth", 
+             x="Honours Year", y="Year on Year Difference %")
+
+ggplotly(awardRateChart5, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
 
 ```
 
@@ -1541,33 +1602,84 @@ awardRateWPTimeOnly <- allDataAnonRemoved %>%
         mutate(YOYDiff = (totalAwards - lag(totalAwards))/lag(totalAwards))
 
 
-ggplot(awardRateWPTimeOnly, aes(honoursYear, totalAwards)) +
+awardRateWPTimeOnlyChart1 <- ggplot(awardRateWPTimeOnly, aes(honoursYear, totalAwards, text=paste(honoursYear,":", totalAwards), group=1)) +
         geom_line() +
-        geom_smooth()
+        geom_smooth(level=0.95, alpha=0.3, size=.5)+
+  geom_line(colour="#2d4059") +
+  custom_theme+
+  labs(title="Number of Orders of Australia awarded since 15 Jan 2001", 
+             x="Year of Honours Awarded", y="Number of Honours Awarded")
+
+ggplotly(awardRateWPTimeOnlyChart1, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
 
 ```
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
-ggplot(awardRateWPTimeOnly, aes(honoursYear, cumYear)) +
+awardRateWPTimeOnlyChart2 <- ggplot(awardRateWPTimeOnly, aes(honoursYear, cumYear)) +
         geom_line() 
 
 ```
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(awardRateWPTimeOnly, aes(honoursYear, diffYearOne)) +
-        geom_line() +
-        geom_smooth()
+awardRateWPTimeOnlyChart3 <- ggplot(awardRateWPTimeOnly, aes(honoursYear, diffYearOne, text=paste(honoursYear ,"-",first(honoursYear),":", diffYearOne), group=1) ) +
+  geom_smooth(level=0.95, alpha=0.3, size=.5)+
+  geom_line(colour="#2d4059") +
+  custom_theme+
+  labs(title="Growth of Honours issued compared to Year One since 2001", 
+             x="Year of Honours Award", y="Honours Awarded compred to Year 1")
+
+ggplotly(awardRateWPTimeOnlyChart3, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
+
+
 
 ```
 
-The difference in the number of awards issued between 2019 and 2020 has pushed the trend line down YOY, but overall, there is still an increase in the nuber of awards.
+The difference in the number of awards issued shows an erratic pattern year on year, with a cycle of issueing many awards, then cutting back oone year. the most extreme was 2019 compred to 2018 and 2020. 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(awardRateWPTimeOnly, aes(honoursYear, YOYDiff)) +
-  geom_smooth()+      
-  geom_col()
+awardRateWPTimeOnlyChart4 <- ggplot(awardRateWPTimeOnly, aes(honoursYear, YOYDiff, text=paste(lag(honoursYear), "v", honoursYear,":", percent(YOYDiff)))) +
+  geom_col(fill="#2d4059")+
+  scale_y_continuous(labels = percent)+
+  custom_theme+
+  labs(title="Year on Year Growth of number of Order of Australia Honours since 2001", 
+             x="Year of Honours Award", y="% Difference YOY")
+
         
+
+ggplotly(awardRateWPTimeOnlyChart4, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
+
+
 ```
 
 Shows total volume of honours each year, and number of those pages that have a wikipedia page.
@@ -1586,9 +1698,28 @@ propPagesOverTime <- allDataAnonRemoved %>%
   group_by(honoursYear, wikipediaPage, totalByYear, totalByPage, yearProp) %>% 
   summarise()
 
-ggplot(propPagesOverTime, aes(honoursYear, totalByPage, group=wikipediaPage))+
+
+
+propPagesOverTimeChart1 <- ggplot(propPagesOverTime, aes(honoursYear, totalByPage, group=wikipediaPage, text=paste(honoursYear, "Wiki Page:", wikipediaPage, totalByPage)))+
   # geom_smooth()+
-  geom_area(aes(fill=wikipediaPage))
+  geom_col(aes(fill=wikipediaPage))+
+  custom_theme+
+  labs(title="Number of honours over time with/without wikipedia article", 
+             x="Year of Honours Award", y="Number of Honours")+
+  scale_fill_manual(values=colours)
+
+ggplotly(propPagesOverTimeChart1, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
+  
 ```
 
 Shows proportion of pages that have a wikipedia page.
@@ -1598,8 +1729,25 @@ Shows proportion of pages that have a wikipedia page.
   
 
 
-ggplot(propPagesOverTime, aes(honoursYear, yearProp, group=wikipediaPage))+
-  geom_area(aes(fill=wikipediaPage))
+propPagesOverTimeChart2 <- ggplot(propPagesOverTime, aes(honoursYear, yearProp, group=wikipediaPage, text=paste(honoursYear, "Wiki Page:", wikipediaPage, percent(yearProp))))+
+ geom_col(aes(fill=wikipediaPage))+
+  custom_theme+
+  labs(title="Proportion of honours over time with/without wikipedia article", 
+             x="Year of Honours Award", y="Proportion of Honours")+
+  scale_fill_manual(values=colours)+
+  scale_y_continuous(labels = percent)
+
+ggplotly(propPagesOverTimeChart2, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
 
 ```
 
@@ -1626,16 +1774,54 @@ awardRateGender <- allDataAnonRemoved %>%
   mutate(awardProp = totalAwards/total) 
 
 
-ggplot(awardRateGender, aes(honoursYear, totalAwards, group=gender))+
-  geom_area(aes(fill=gender), position="stack")
+awardRateGenderChart1 <- ggplot(awardRateGender, aes(honoursYear, totalAwards, group=gender,text=paste(honoursYear, ",",gender,":", totalAwards)))+
+  geom_col(aes(fill=gender), position="stack")+
+  scale_fill_manual(values=coloursGender)+
+  custom_theme+
+  labs(title="Number of honours over time split by Gender", 
+             x="Year of Honours Award", y="Number of Honours")
+  
+ggplotly(awardRateGenderChart1, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
+
 
 ```
 
 Proportion of awards by gender
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-ggplot(awardRateGender, aes(honoursYear, awardProp, group=gender))+
-  geom_area(aes(fill=gender), position="stack")
+awardRateGenderChart2 <- ggplot(awardRateGender, aes(honoursYear, awardProp, group=gender, text=paste(honoursYear, ",",gender,":", percent(awardProp))))+
+  geom_col(aes(fill=gender), position="stack")+
+  scale_fill_manual(values=coloursGender)+
+  custom_theme+
+  labs(title="Proportion of honours over time split by Gender", 
+             x="Year of Honours Award", y="Proportion of Honours")+
+  scale_y_continuous(labels = percent)
+  
+
+ggplotly(awardRateGenderChart2, tooltip="text") %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients with page n=4423", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
+
+
+
 ```
 
 
