@@ -1826,6 +1826,8 @@ layout(font=t,
 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+ 
+
 awardRateGender <- allDataAnonRemoved %>% 
         select(honoursYear, gender, wikipediaPage) %>% 
       filter(!is.na(honoursYear)) %>% 
