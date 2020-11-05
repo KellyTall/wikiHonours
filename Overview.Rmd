@@ -1871,7 +1871,7 @@ ggplotly(weekDiffChart, tooltip="text") %>%
 
 
 ```
-The chart below "zooms in" on this and looks at the twleve months prior to an award and the tweleve months after. Again, the line represents the 2.2 pages per week period. It shows that while there is a small amount of activity in the weeks leading up to and after, there is a jump in the number of pages created on the week of the honours announcement. 
+The chart below "zooms in" on this and looks at the twleve months prior to an award and the twelve months after. Again, the line represents the 2.2 pages per week period. It shows that while there is a small amount of activity in the weeks leading up to and after, there is a jump in the number of pages created on the week of the honours announcement. 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
