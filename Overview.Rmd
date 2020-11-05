@@ -1909,7 +1909,7 @@ ggplotly(weekDiffChart1Year, tooltip="text") %>%
 
 ```
 
-The heat map below shows the intensity of age ceration for each of the honour levels. The most activity happens for those receiving an AM or an AO. 
+The heat map below shows the intensity of page creation for each of the honour levels. The most activity happens for those receiving an AM or an AO. 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
    
