@@ -101,7 +101,10 @@ wikipedia <- read_csv("wikipedia.csv") %>%
   mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
         mutate(awardComb = factor(awardComb, levels = c("ADK", "AC", "AO", "AM", "OAM"))) %>% 
     mutate(division = factor(division, levels = c("G", "M", "HG", "HM", "HP"))) %>% 
-  ungroup()
+  ungroup() %>% 
+   mutate(weekDiffw = interval(newAwardDate, WPDate) / dweeks(1),
+          weekDiff = floor(weekDiffw)) %>% 
+  select(-weekDiffw)
         
 
 ```
@@ -226,7 +229,7 @@ The Australian Honors system began in 1975, and wikipedia was established on 15 
 ```{r eval=TRUE, echo=FALSE}
 
 dateCalcs <- wikipedia %>% 
-  select(name, firstAwardDate, newAwardDate, WPDate, yearDiff) %>% 
+  select(name, firstAwardDate, newAwardDate, WPDate, newYearDiff) %>% 
         head()
 
 dateCalcs
@@ -1008,14 +1011,14 @@ The distribution of the chart below shows based on all recipeints, there are mor
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 prePostAward <- wikipedia %>% 
-        select(yearDiff) %>%
-        group_by(yearDiff) %>% 
+        select(newYearDiff) %>%
+        group_by(newYearDiff) %>% 
         tally() 
   
         
 
 
-yearDiffChart <-  ggplot(prePostAward, aes(yearDiff, n, text=paste('Difference:', yearDiff, "years, n=", n))) +
+newYearDiffChart <-  ggplot(prePostAward, aes(newYearDiff, n, text=paste('Difference:', newYearDiff, "years, n=", n))) +
         geom_col(fill="#2d4059") +
   custom_theme +
         labs(title="Difference in time beween award and wikipedia page creation", 
@@ -1031,7 +1034,7 @@ m <- list(
 
 
 
-ggplotly(yearDiffChart, tooltip="text") %>% 
+ggplotly(newYearDiffChart, tooltip="text") %>% 
   layout(font=t, 
          title = list(text = paste0('Difference in time beween award and wikipedia page creation',
                                     '<br>',
@@ -1061,34 +1064,34 @@ The below chart only shows those who receievd an honour on or after the start of
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 prePostAwardPrePostWP <- wikipedia %>% 
-        select(firstAwardDate, wikipediaYear, yearDiff) %>% 
+        select(firstAwardDate, wikipediaYear, newYearDiff) %>% 
         mutate(prePost = case_when(firstAwardDate<"2001-01-15" ~ "Pre WP",
                                    firstAwardDate>="2001-01-15" ~ "Post WP")) %>% 
         filter(prePost=="Post WP") %>% 
-        select(yearDiff, prePost) %>%
-        group_by(prePost, yearDiff) %>% 
+        select(newYearDiff, prePost) %>%
+        group_by(prePost, newYearDiff) %>% 
         tally() 
   
 
 # prePostAwardPrePostWPFilter <- wikipedia %>%
-#         select(firstAwardDate, wikipediaYear, yearDiff) %>%
+#         select(firstAwardDate, wikipediaYear, newYearDiff) %>%
 #         mutate(prePost = case_when(firstAwardDate<"2001-01-15" ~ "Pre WP",
 #                                    firstAwardDate>="2001-01-15" ~ "Post WP")) %>%
 #         filter(prePost=="Pre WP") %>%
-#         select(yearDiff, prePost) %>%
-#         group_by(prePost, yearDiff) %>%
+#         select(newYearDiff, prePost) %>%
+#         group_by(prePost, newYearDiff) %>%
 #         tally()
 
 
 
-yearDiffPrePostChartFilter <-  ggplot(prePostAwardPrePostWP, aes(yearDiff, n, text=paste('Difference:', yearDiff, "years, n=",n))) +
+newYearDiffPrePostChartFilter <-  ggplot(prePostAwardPrePostWP, aes(newYearDiff, n, text=paste('Difference:', newYearDiff, "years, n=",n))) +
         geom_col(fill="#2d4059") +
   custom_theme +
-        labs(title="Years Difference between honour and page (only those with award on or post 2001)", 
+        labs(title="Years Difference between honour & page (only those with award on/post 2001)", 
              x="Years Difference between honour and award", y="Number of recipients")
 
 
-# yearDiffPrePostChartFilter <-  ggplot(prePostAwardPrePostWPFilter, aes(yearDiff, n, text=paste('Difference:', yearDiff, "years, n=",n))) +
+# newYearDiffPrePostChartFilter <-  ggplot(prePostAwardPrePostWPFilter, aes(newYearDiff, n, text=paste('Difference:', newYearDiff, "years, n=",n))) +
 #         geom_col(fill="#2d4059") +
 #   custom_theme
 
@@ -1100,7 +1103,7 @@ m <- list(
   pad = 4
 )   
 
-ggplotly(yearDiffPrePostChartFilter, tooltip="text") %>% 
+ggplotly(newYearDiffPrePostChartFilter, tooltip="text") %>% 
   layout(font=t, 
          annotations = 
            list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving award post-wikipedia n=2528", 
@@ -1129,10 +1132,10 @@ Focussing further on this group who received their honour on or after the start 
 
 prePostAwardSumExcOld <- wikipedia %>% 
         filter(firstAwardDate>"2001-01-15") %>% 
-        select(name, timeDiff) %>%
+        select(name, newTimeDiff) %>%
         add_tally(name="total") %>% 
-  mutate(beforeAfter = case_when(timeDiff >=0 ~ "on or after honours",
-                                 timeDiff<0 ~ "before Honours")) %>%
+  mutate(beforeAfter = case_when(newTimeDiff >=0 ~ "on or after honours",
+                                 newTimeDiff<0 ~ "before Honours")) %>%
               mutate(beforeAfter = factor(beforeAfter, levels = c("before Honours","on or after honours"))) %>%
   group_by(beforeAfter) %>% 
         filter(!is.na(beforeAfter)) %>% 
@@ -1171,10 +1174,10 @@ For those who received their award after the start of wikipedia, across most hon
 
 prePostAwardSumExcOldLevels <- wikipedia %>% 
         filter(firstAwardDate>"2001-01-15") %>% 
-        select(name, timeDiff, awardComb) %>%
+        select(name, newTimeDiff, awardComb) %>%
         add_tally(name="total") %>% 
-  mutate(beforeAfter = case_when(timeDiff >=0 ~ "on/after Hons",
-                                 timeDiff<0 ~ "before Hons")) %>%
+  mutate(beforeAfter = case_when(newTimeDiff >=0 ~ "on/after Hons",
+                                 newTimeDiff<0 ~ "before Hons")) %>%
               mutate(beforeAfter = factor(beforeAfter, levels = c("before Hons","on/after Hons"))) %>%
         ungroup() %>% 
         group_by(beforeAfter) %>% 
@@ -1275,11 +1278,11 @@ chart10 %>% layout(font=t,
 prePostAwardYearGender <- wikipedia %>% 
   filter(firstAwardDate>"2001-01-15") %>% 
   filter(gender!="U") %>% 
-        select(timeDiff, gender) %>%
+        select(newTimeDiff, gender) %>%
         group_by(gender) %>% 
                add_tally(name="total") %>%
-  mutate(beforeAfter = case_when(timeDiff >=0 ~ "on or after honours",
-                                 timeDiff<0 ~ "before Honours")) %>%
+  mutate(beforeAfter = case_when(newTimeDiff >=0 ~ "on or after honours",
+                                 newTimeDiff<0 ~ "before Honours")) %>%
               mutate(beforeAfter = factor(beforeAfter, levels = c("before Honours","on or after honours"))) %>%
   group_by(beforeAfter, gender) %>% 
         filter(!is.na(beforeAfter)) %>% 
@@ -1372,7 +1375,7 @@ In order to see the peaks and drops more clearly, pages have been aggregated to 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 
-cumPageYearDiff <- wikipedia %>% 
+cumPagenewYearDiff <- wikipedia %>% 
        select(wikipediaYear) %>% 
         group_by(wikipediaYear) %>% 
         filter(!is.na(wikipediaYear)) %>% 
@@ -1383,7 +1386,7 @@ cumPageYearDiff <- wikipedia %>%
                # cumpagesDiffPercent = cumpagesDiff/ first(total)*100,
                cumpagesDiffPercentYOY = (total- lag(total))/lag(total))
 
-cumPageChartYear <- ggplot(cumPageYearDiff, aes(wikipediaYear, total, text=paste(wikipediaYear,": ", total), group=1)) +
+cumPageChartYear <- ggplot(cumPagenewYearDiff, aes(wikipediaYear, total, text=paste(wikipediaYear,": ", total), group=1)) +
         geom_smooth(method=lm, level=0.90, alpha=0.3, size=.5)+
          geom_line(colour="#2d4059", width=2) +
         # geom_smooth()+
@@ -1419,7 +1422,7 @@ The chart below compares each year to the start year. Between 2001, and 2002 the
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
-cumPageChartYearDiffStart <- ggplot(cumPageYearDiff, aes(wikipediaYear, pagesDiffStart, group=1, text=paste("2001 v",wikipediaYear,":", pagesDiffStart))) +
+cumPageChartnewYearDiffStart <- ggplot(cumPagenewYearDiff, aes(wikipediaYear, pagesDiffStart, group=1, text=paste("2001 v",wikipediaYear,":", pagesDiffStart))) +
         custom_theme+
         labs(title="Pages created in year one versus consecutive years", 
              x="Date of Page creation", y="Difference in number of pages")+
@@ -1433,7 +1436,7 @@ m <- list(
   pad = 4
 )   
 
-ggplotly(cumPageChartYearDiffStart, tooltip="text") %>% 
+ggplotly(cumPageChartnewYearDiffStart, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
            list(x = 1, y = -0.2, text = "All Recipients with WP page n=4423", 
@@ -1450,7 +1453,7 @@ layout(font=t,
 Looking at the percentage difference year on year in page creation, the last five years has seen a flattening of the creation of new pages of thsoe who have received an Australian Honours.  
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
-cumPageChartYearDiffYOY <- ggplot(cumPageYearDiff, aes(wikipediaYear, cumpagesDiffPercentYOY, text=paste(lag(wikipediaYear),"v", wikipediaYear,":",percent (cumpagesDiffPercentYOY)))) +
+cumPageChartnewYearDiffYOY <- ggplot(cumPagenewYearDiff, aes(wikipediaYear, cumpagesDiffPercentYOY, text=paste(lag(wikipediaYear),"v", wikipediaYear,":",percent (cumpagesDiffPercentYOY)))) +
         geom_col(fill="#2d4059")+
         custom_theme+
         labs(title="Page creation difference Year on Year", 
@@ -1458,7 +1461,7 @@ cumPageChartYearDiffYOY <- ggplot(cumPageYearDiff, aes(wikipediaYear, cumpagesDi
         scale_y_continuous(labels = percent)
         
 
-ggplotly(cumPageChartYearDiffYOY, tooltip="text") %>% 
+ggplotly(cumPageChartnewYearDiffYOY, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
            list(x = 1, y = -0.2, text = "All Recipients with WP page n=4423", 
@@ -1826,26 +1829,124 @@ layout(font=t,
 ```
 
 
+#### Closer Look at page creation v honour date
+
+This section again looks at the date of the honour being awarded and the difference in time between wikipedia page creation. Negative numbers mean the wikipedia page was created before the award, and positive means it was created aftre the honour. Dates were broken out into week numbers, then each interval was calculated to determine a "week number". "O" means the honour and wikipedia page happened in the same week period. "-2" means the wikipedia page was created in the two week period leading up to the honour being awarded. 
+
+The below chart shows that there is higher than average activity in week zero, with 44 pages created in that week compared ot the avaerage of 2.2 pages a week (represented by the line).
+
+
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
- 
 
-awardRateGender <- allDataAnonRemoved %>% 
-        select(honoursYear, gender, wikipediaPage) %>% 
-      filter(!is.na(honoursYear)) %>% 
-  filter(gender!="U") %>% 
-  group_by(honoursYear) %>% 
-  add_tally(name="total") %>% 
+
+weekDiffAllYears <- wikipedia %>%
+  filter(prePostWikiPedia=="Post") %>% 
+  select(weekDiff) %>% 
+  # filter(newTimeDiff <=365 & newTimeDiff >=-365) %>%
+  group_by(weekDiff) %>% 
+  tally() %>% 
   ungroup() %>% 
-  group_by(honoursYear, gender) %>% 
-  add_tally(name="totalGender") %>% 
-  mutate(genderProp=totalGender/total) %>% 
-  group_by(honoursYear, gender, wikipediaPage) %>% 
-  add_tally(name="totalGenderWPage") %>% 
-  mutate(WPProp=totalGenderWPage/totalGender) %>% 
-  mutate(awardProp = totalGenderWPage/totalGender) 
+  mutate(mean = mean(n)) %>% 
+  mutate(median = median(n))
 
+weekDiffChart <- ggplot(weekDiffAllYears, aes(weekDiff, n, group=1, text=paste("week", weekDiff, ":", n)))+
+  geom_col(fill="#2d4059") +
+  geom_hline(aes(yintercept = mean))+
+  custom_theme+
+  labs(title="Time of wikipedia page creation for those who received honours after 15 Jan 2001", 
+             x="weeks before or after award page is created", y="Number of wikipedia pages")
+
+
+ggplotly(weekDiffChart, tooltip="text") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving award post-wikipedia n=2528", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
+
+
+```
+The chart below "zooms in" on this and looks at the twleve months prior to an award and the tweleve months after. Again, the line represents the 2.2 pages per week period. It shows that while there is a small amount of activity in the weeks leading up to and after, there is a jump in the number of pages created on the week of the honours announcement. 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+weekDiff1Year <- wikipedia %>%
+  filter(prePostWikiPedia=="Post") %>% 
+  select(newTimeDiff, weekDiff) %>% 
+  filter(newTimeDiff <=365 & newTimeDiff >=-365) %>%
+  group_by(weekDiff) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  mutate(mean = mean(n)) %>% 
+  mutate(median = median(n))
+
+weekDiffChart1Year <- ggplot(weekDiff1Year, aes(weekDiff, n, group=1, text=paste("week", weekDiff, ":", n)))+
+  geom_col(fill="#2d4059") +
+  geom_hline(aes(yintercept = 2.2))+
+  custom_theme+
+  labs(title="1YR: Time of wikipedia page creation for those who received honours after 15 Jan 2001", 
+             x="weeks before or after award page is created", y="Number of wikipedia pages")
+
+
+ggplotly(weekDiffChart1Year, tooltip="text") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving award post-wikipedia 1 year before or after n=351", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
 
 
 ```
 
+The heat map below shows the intensity of age ceration for each of the honour levels. The most activity happens for those receiving an AM or an AO. 
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+   
+weekDiffAllYears <- wikipedia %>%
+  filter(prePostWikiPedia=="Post",
+         awardComb!="ADK") %>%
+  select(weekDiff, awardComb, newTimeDiff) %>% 
+  filter(newTimeDiff <=182 & newTimeDiff >=-182) %>%
+  group_by(weekDiff, awardComb) %>% 
+  tally() %>% 
+  ungroup() %>% 
+  mutate(mean = mean(n)) %>% 
+  mutate(median = median(n))
+
+weekDiffAllYearChartLevel <- ggplot(weekDiffAllYears, aes(weekDiff, awardComb, fill=n, text=paste("week", weekDiff, ":", n)))+
+  geom_tile() +
+  custom_theme+
+  scale_fill_distiller(type="seq", direction=1, na.value="black", palette="OrRd")+
+  labs(title="6mnths: Time of wikipedia page creation for those who received honours after 15 Jan 2001", 
+             x="weeks before or after award page is created", y="Number of pages / honour type")
+
+
+ggplotly(weekDiffAllYearChartLevel, tooltip="text") %>% 
+  layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving award post-wikipedia 6mnths before or after n=223", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)  
+
+```
+
+
+
+```
 
