@@ -29,10 +29,16 @@ library(GGally)
 library(ggraph)
 library(tidygraph)
 library(ggalluvial)
+library(wesanderson)
 
-colours <- c("#2d4059", "#ea5455")
 
-colours_gender <- c("sienna3", "turquoise4")
+
+names(wes_palettes)
+
+colours <- wes_palette("Cavalcanti1", 5)
+colours_gender <- wes_palette("Moonrise1", 2)
+
+
 
 custom_theme <-  theme(
                         panel.grid.major.x = element_line(colour = "lightgrey", size=0.25),
