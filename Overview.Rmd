@@ -1390,6 +1390,48 @@ layout(font=t,
          margin=m)    
 ```
 
+#### Gender and page creation
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+gender_before_after  <-  wikipedia %>% 
+  filter(gender!="U") %>% 
+  mutate(before_after = case_when(time_diff >=0 ~ "on or after honours",
+                                  time_diff<0 ~ "before Honours")) %>%
+  mutate(before_after = factor(before_after, levels = c("before Honours","on or after honours"))) %>% 
+  group_by(gender) %>% 
+  add_tally() %>% 
+  group_by(gender, before_after, n) %>% 
+  tally() %>% 
+  filter(!is.na(before_after)) %>% 
+  mutate(prop = nn/n)
+
+
+total_before_after  <-  wikipedia %>% 
+  filter(gender!="U") %>% 
+  mutate(before_after = case_when(time_diff >=0 ~ "on or after honours",
+                                  time_diff<0 ~ "before Honours")) %>%
+  mutate(before_after = factor(before_after, levels = c("before Honours","on or after honours"))) %>% 
+  add_tally() %>% 
+  group_by(before_after, n) %>% 
+  tally() %>% 
+  filter(!is.na(before_after)) %>% 
+  mutate(prop = nn/n) %>% 
+  filter()
+
+gender_ba_check <- ggplot(gender_before_after, aes(gender, prop, fill=gender, text = percent(prop))) +
+  geom_col() +
+  facet_wrap(~before_after)+
+  geom_hline(data=total_before_after, aes(yintercept = prop))+
+  custom_theme+
+  scale_fill_manual(values=colours_gender)
+
+  
+
+ggplotly(gender_ba_check, tooltip="text")
+
+
+```
+
 #### Summary
 * There are only a small representation of Order of Australia recipients on wikipedia, but the higher the order you have the more likely you have a page
 
