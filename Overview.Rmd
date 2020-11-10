@@ -38,6 +38,10 @@ names(wes_palettes)
 colours <- wes_palette("Cavalcanti1", 5)
 colours_gender <- wes_palette("Moonrise1", 2)
 
+# par(mfrow=c(10,2))
+# for(i in names(wes_palettes)) {
+#   print(wes_palette(i))
+# }
 
 
 custom_theme <-  theme(
@@ -255,6 +259,36 @@ date_calcs <- wikipedia %>%
         head()
 
 date_calcs
+
+
+honours_num <- recipient %>% 
+  ungroup() %>% 
+        select(wikipedia_page)
+
+page_num <- recipient %>% 
+        select(wikipedia_page) %>% 
+  ungroup() %>% 
+  filter(wikipedia_page=="Yes") 
+
+
+prop_honour <- recipient %>% 
+        select(wikipedia_page) %>% 
+        add_tally() %>% 
+        rename(total =n) %>% 
+        group_by(wikipedia_page, total) %>% 
+        tally() %>% 
+        mutate(prop = n/total)
+
+prop_wp <- recipient %>% 
+        select(wikipedia_page) %>% 
+        add_tally() %>% 
+        rename(total =n) %>% 
+        group_by(wikipedia_page, total) %>% 
+        tally() %>% 
+        mutate(prop = n/total) %>% 
+  filter(wikipedia_page=="Yes") %>% 
+  select(prop)
+
 ```
 
 ### Addressing the research Questions 
@@ -264,19 +298,37 @@ date_calcs
 
 The Order of Australia data set represents a group of indviduals who have been recognised for service and therefore could be considered "notable". Understanding broadly the proportion of these people who also have a wikipedia page, helps us understand the representation of noted Australians on this platform. This section looks at the number of wikipedia pages written for Order recipients overall, and through different filters of gender and order level.
 
-Looking at all honours recipients as a whole, there is only a small proportion of them that have a wikipedia page.
+Looking at all honours recipients as a whole, there is only a small proportion of them that have a wikipedia page. From `r nrow(recipient)` recipients of an Order of Australia, there are `r nrow(page_num)` who have a wikipedia page which is `r percent(prop_wp$prop)`.   
 
 <i>(Please note the charts in this section show all <b>recipients</b> of an Order of Australia. If they have received multiple awards, we are only including their first award issued so it matches with one page created for them. The creation of the wikipedia page may not have occurred in the same year as the honour, but simply indicates if they have a page or not)</i>
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
-prop_honour <- all_data %>% 
+
+honours_num <- recipient %>% 
+        select(wikipedia_page)
+
+page_num <- recipient %>% 
+        select(wikipedia_page)
+
+
+prop_honour <- recipient %>% 
         select(wikipedia_page) %>% 
         add_tally() %>% 
         rename(total =n) %>% 
         group_by(wikipedia_page, total) %>% 
         tally() %>% 
         mutate(prop = n/total)
+
+prop_wp <- recipient %>% 
+        select(wikipedia_page) %>% 
+        add_tally() %>% 
+        rename(total =n) %>% 
+        group_by(wikipedia_page, total) %>% 
+        tally() %>% 
+        mutate(prop = n/total) %>% 
+  filter(wikipedia_page=="Yes") %>% 
+  select(prop)
 
 prop_honour_chart <-  ggplot(prop_honour, aes(wikipedia_page, prop, fill=wikipedia_page,
                               text = paste(percent(prop)))) +
@@ -791,6 +843,14 @@ chart4 %>% layout(font=t,
          margin=m)
 
 
+award_pre_post_day_mean <- wikipedia %>% 
+  select(time_diff, honours_year) %>%
+  group_by(time_diff) %>% 
+  tally(name="total") %>% 
+  na.omit %>% 
+  mutate(mean = mean(total)) %>% 
+  group_by(mean) %>% 
+  summarise()
 
 
 ```
@@ -803,23 +863,27 @@ Whether an award issued in a given year has a page or not tells us proportions o
 
 The below analysis looks at the difference in time between honour and page creation date. 
 
-The first chart shows the amount of time by day, between receieving the award and when their wikipedia page was created. There are a few different peaks shown, with the highest being twenty pages created on day zero, or the day that a person receives their award.  (The chart is quite pale as there are many frequency counts per day, but it's possible to brush over the chart with your mouse to highlight a particular area.)
+The first chart shows the amount of time by day, between receieving the award and when their wikipedia page was created. There are a few different peaks shown, with the highest being twenty pages created on day zero, or the day that a person receives their award.  (The chart is quite pale as there are many frequency counts per day, but it's possible to brush over the chart with your mouse to highlight a particular area.) The average page creation each day is `r (award_pre_post_day_mean$mean)`
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
 
-award_pre_post_week <- wikipedia %>% 
+award_pre_post_day <- wikipedia %>% 
   select(time_diff, honours_year) %>%
   group_by(time_diff) %>% 
   tally(name="total") %>% 
-  na.omit
+  na.omit %>% 
+  mutate(mean = mean(total)) %>% 
+  group_by(time_diff, total, mean) %>% 
+  summarise()
 
-award_pre_post_week_chart <-  ggplot(award_pre_post_week, aes(time_diff, total, text=paste('Difference:', time_diff, "days, n=", total))) +
+award_pre_post_day_chart <-  ggplot(award_pre_post_day, aes(time_diff, total, text=paste('Difference:', time_diff, "days, n=", total))) +
         geom_col(fill="black") +
   custom_theme +
         labs(title="Difference in time between award and wikipedia page creation by day", 
              x="Days Difference between honour and award", y="Number of wikipedia pages created") +
   theme(panel.grid.major.x = element_blank())
+  # geom_hline(aes(yintercept = mean))
 
 m <- list(
   l = 75,
@@ -831,7 +895,7 @@ m <- list(
 
 
 
-ggplotly(award_pre_post_week_chart, tooltip="text") %>% 
+ggplotly(award_pre_post_day_chart, tooltip="text") %>% 
   layout(font=t, 
          title = list(text = paste0('Difference in time between award and wikipedia page creation by day',
                                     '<br>',
@@ -858,7 +922,8 @@ Rolling the daily increments up to seven day increments, shows the frequencies a
 award_pre_post_week <- wikipedia %>% 
   select(week_diff) %>%
   group_by(week_diff) %>% 
-  tally(name="total") 
+  tally(name="total") %>% 
+  mutate(mean(total))
 
 
 
@@ -1013,7 +1078,7 @@ award_pre_post_chart <-  ggplot(award_pre_post, aes(week_diff, total, text=paste
   geom_hline(aes(yintercept = mean))+
   custom_theme +
         labs(title="Difference in time between award and wikipedia page creation", 
-             x="Years Difference between honour and award", y="Number of recipients")+
+             x="Weeks Difference between honour and award", y="Number of recipients")+
   theme(panel.grid.major.x = element_blank())
 
 m <- list(
