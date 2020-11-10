@@ -519,7 +519,8 @@ award_level_all_chart <- ggplot(award_level_all, aes(honours_year, total_honours
   geom_col()+
   custom_theme+
   labs(title="Number of honour levels awarded over time", 
-             x="Year of Honours Award", y="Number of Honour Levels")
+             x="Year of Honours Award", y="Number of Honour Levels")+
+    scale_fill_manual(values=colours)
 
 
 ggplotly(award_level_all_chart, tooltip="text") %>% 
@@ -545,7 +546,7 @@ award_level_prop_chart <- ggplot(award_level_all, aes(honours_year, prop, fill=a
   custom_theme+
   labs(title="Proportion of honour levels awarded over time", 
              x="Year of Honours Award", y="Number of Honour Levels")+
-  # scale_fill_manual(values=colours)+
+  scale_fill_manual(values=colours)+
   scale_y_continuous(labels = percent)
 
 ggplotly(award_level_prop_chart, tooltip="text") %>% 
@@ -863,7 +864,7 @@ Whether an award issued in a given year has a page or not tells us proportions o
 
 The below analysis looks at the difference in time between honour and page creation date. 
 
-The first chart shows the amount of time by day, between receieving the award and when their wikipedia page was created. There are a few different peaks shown, with the highest being twenty pages created on day zero, or the day that a person receives their award.  (The chart is quite pale as there are many frequency counts per day, but it's possible to brush over the chart with your mouse to highlight a particular area.) The average page creation each day is `r (award_pre_post_day_mean$mean)`
+The first chart shows the amount of time by day, between receieving the award and when their wikipedia page was created. There are a few different peaks shown, with the highest being twenty pages created on day zero, or the day that a person receives their award.  (The chart is quite pale as there are many frequency counts per day, but it's possible to brush over the chart with your mouse to highlight a particular area.) The average page creation each day is `r (round(award_pre_post_day_mean$mean, 2))` and on day zero it is 20.
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
