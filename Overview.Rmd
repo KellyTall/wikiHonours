@@ -33,15 +33,16 @@ library(wesanderson)
 
 
 
-names(wes_palettes)
+# names(wes_palettes)
 
-colours <- wes_palette("Cavalcanti1", 5)
-colours_gender <- wes_palette("Moonrise1", 2)
+colours_wp <- wes_palette("Cavalcanti1", 5)
 
-# par(mfrow=c(10,2))
-# for(i in names(wes_palettes)) {
-#   print(wes_palette(i))
-# }
+gender <- wes_palettes$Darjeeling1
+
+colours_gender <- gender[c(2,4)]
+
+colours_5 <- wes_palette("Darjeeling1", 5)
+
 
 
 custom_theme <-  theme(
@@ -335,7 +336,7 @@ prop_honour_chart <-  ggplot(prop_honour, aes(wikipedia_page, prop, fill=wikiped
   geom_col()+
    labs(title="Proportion of Honours recipients who have a wikipedia page",
        x="Order of Australia recipients", y="Proportion of honour recipients") +
-  scale_fill_manual(values=colours)+
+  scale_fill_manual(values=colours_wp)+
   scale_y_continuous(labels = percent)+
   custom_theme
   
@@ -402,7 +403,9 @@ pages_over_time_chart <- ggplot(pages_over_time)+
   geom_hline(data=pages_over_time_mean, aes(yintercept = nn))+
   labs(title="Number of honours over time with/without wikipedia article", 
              x="Year of Honours Award", y="Number of Honours")+
-  scale_fill_manual(values=colours)
+  scale_fill_manual(values=colours_wp)+
+  geom_segment(x = 2001, xend=2001, y=0, yend=2000, linetype="dotted", size=0.3, colour="slategray")+
+  annotate(geom="text", x=2001, y=2050, label="Wikipedia Begins")
 
 ggplotly(pages_over_time_chart, tooltip="text") %>% 
 layout(font=t, 
@@ -447,8 +450,10 @@ pages_over_time_prop <- ggplot(pages_over_time, aes(honours_year, yearProp, grou
   custom_theme+
   labs(title="Proportion of honours recipients over time with/without wikipedia article", 
              x="Year of Honours Award", y="Proportion of Honours")+
-  scale_fill_manual(values=colours)+
-  scale_y_continuous(labels = percent)
+  scale_fill_manual(values=colours_wp)+
+  scale_y_continuous(labels = percent) +
+  geom_segment(x = 2001, xend=2001, y=0, yend=1.02, linetype="dotted", size=0.3, colour="slategray")+
+  annotate(geom="text", x=2001, y=1.05, label="Wikipedia Begins")
 
 
 
@@ -471,14 +476,16 @@ Focussing on just the proportion of recipients who have received an honour each 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 pages_over_time_prop_subset <- ggplot(subset(pages_over_time, wikipedia_page=="Yes"), aes(honours_year, yearProp, group=wikipedia_page, text=paste(honours_year,":", percent(yearProp, 2))))+
- geom_col(aes(fill="#2d4059"))+
+ geom_col(fill="#02401B")+
   geom_hline(data=prop_average, aes(yintercept = n))+
   custom_theme+
   labs(title="Proportion of honours recipients over time with wikipedia article", 
              x="Year of Honours Award", y="Proportion of Honours")+
-  # scale_fill_manual(values=colours)+
+  scale_fill_manual(values=colours_wp)+
   scale_y_continuous(labels = percent)+
-  geom_smooth(method="lm")
+  geom_smooth(method="lm")+
+  geom_segment(x = 2001, xend=2001, y=0, yend=0.25, linetype="dotted", size=0.3, colour="slategray")+
+  annotate(geom="text", x=2001, y=0.26, label="Wikipedia Begins")
 
 
 
@@ -492,7 +499,7 @@ layout(font=t,
           autosize=F,
          width=800, 
          height=500,
-         margin=m)  
+         margin=m)
 
 ```
 
@@ -517,10 +524,13 @@ award_level_all <- recipient %>%
 
 award_level_all_chart <- ggplot(award_level_all, aes(honours_year, total_honours, fill=award_comb, text=paste(honours_year,award_comb,"n=", total_honours))) +
   geom_col()+
+  geom_segment(x = 2001, xend=2001, y=0, yend=2000, linetype="dotted", size=0.3, colour="slategray")+
+  annotate(geom="text", x=2001, y=2050, label="Wikipedia Begins")+
   custom_theme+
   labs(title="Number of honour levels awarded over time", 
              x="Year of Honours Award", y="Number of Honour Levels")+
-    scale_fill_manual(values=colours)
+    scale_fill_manual(values=colours_5)
+  
 
 
 ggplotly(award_level_all_chart, tooltip="text") %>% 
@@ -546,8 +556,11 @@ award_level_prop_chart <- ggplot(award_level_all, aes(honours_year, prop, fill=a
   custom_theme+
   labs(title="Proportion of honour levels awarded over time", 
              x="Year of Honours Award", y="Number of Honour Levels")+
-  scale_fill_manual(values=colours)+
-  scale_y_continuous(labels = percent)
+  scale_fill_manual(values=colours_5)+
+  scale_y_continuous(labels = percent)+
+  geom_segment(x = 2001, xend=2001, y=0, yend=1.05, linetype="dotted", size=0.3, colour="slategray")+
+  annotate(geom="text", x=2001, y=1.06, label="Wikipedia Begins")
+
 
 ggplotly(award_level_prop_chart, tooltip="text") %>% 
 layout(font=t, 
@@ -586,7 +599,7 @@ pagePropAwardChart <- ggplot(pagePropAward, aes(award_comb, prop, fill=wikipedia
         labs(title="Proportion of award recipients that have a wikipedia article page by highest award received", 
              x="Order of Australia (membership levels)", y="Proportion of recipients") +
         scale_y_continuous(labels = percent)+
-        scale_fill_manual(values=colours)
+        scale_fill_manual(values=colours_wp)
 
 
 t <- list(
@@ -627,7 +640,10 @@ gender_split_chart <- ggplot(gender_split, aes(honours_year, total_gender, fill=
   custom_theme+
   labs(title="Number of honours awarded over time split by gender", 
              x="Year of Honours Award", y="Number of Honour Levels")+
-  scale_fill_manual(values=colours_gender)
+  scale_fill_manual(values=colours_gender)+
+  geom_segment(x = 2001, xend=2001, y=0, yend=2000, linetype="dotted", size=0.3, colour="slategray")+
+  annotate(geom="text", x=2001, y=2100, label="Wikipedia Begins")
+
   
 
 ggplotly(gender_split_chart, tooltip="text") %>% 
@@ -653,7 +669,10 @@ gender_split_prop_chart <- ggplot(gender_split, aes(honours_year, prop, fill=gen
         labs(title="Proportion of honours by gender", 
                     x="Year of Honours Award", y="Proportion")+
         scale_y_continuous(labels = percent)+
-        scale_fill_manual(values=colours_gender)
+        scale_fill_manual(values=colours_gender)+
+  geom_segment(x = 2001, xend=2001, y=0, yend=1.04, linetype="dotted", size=0.3, colour="slategray")+
+  annotate(geom="text", x=2001, y=1.07, label="Wikipedia Begins")
+
 
 ggplotly(gender_split_prop_chart, tooltip="text") %>% 
 layout(font=t, 
@@ -692,14 +711,43 @@ gender_split_page_subset <- recipient %>%
   group_by(wikipedia_page, gender) %>% 
   mutate(mean=mean(n))
 
+
 gender_diff_wp <- ggplot(gender_split_page, aes(honours_year, n, fill=wikipedia_page, text=paste(honours_year, gender, ":", n)))+
   geom_col()+
   facet_wrap(~gender)+
   geom_hline(data=gender_split_page_subset, aes(yintercept = mean))+
   custom_theme+
-  scale_fill_manual(values=colours)
+  scale_fill_manual(values=colours_wp)+
+  labs(title="Number of award recipients that have a wikipedia article page by Gender", subtitle = "Line represents total proportion to highlight differences",
+             x="Year of Honour", y="Number of recipients") +
+  geom_segment(x = 2001, xend=2001, y=0, yend=1500, linetype="dotted", size=0.04, colour="slategray")+
+  annotate(geom="text", x=2001, y=1550, label="WP begins", size=3)
 
-ggplotly(gender_diff_wp, tooltip="text") %>% 
+
+
+m <- list(
+  l = 75,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)        
+
+
+
+t <- list(
+  family = "Helvetica",
+  size = 14)
+
+
+
+
+gender_diff_wp_plot <- ggplotly(gender_diff_wp, tooltip="text")
+
+gender_diff_wp_plot[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+gender_diff_wp_plot[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+gender_diff_wp_plot%>% 
 layout(font=t, 
          annotations = 
            list(x = 1, y = -0.2, text = "All Recipients n=41,330", 
@@ -735,11 +783,11 @@ pagePropGenderAward <- recipient %>%
 pagePropGenderAwardChart <- ggplot(pagePropGenderAward, aes(gender, prop, fill=wikipedia_page,text = paste(percent(prop)))) +
         geom_bar(position="fill", stat="identity") +
         custom_theme+
-        labs(title="Proportion of award recipients that have a wikipedia article page by Gender", 
+        labs(title="Honour Levels: Proportion of award recipients that have a wikipedia article page by Gender", 
              x="Order of Australia (membership levels)", y="Proportion of recipients") +
 
         scale_y_continuous(labels = percent)+
-        scale_fill_manual(values=colours)+
+        scale_fill_manual(values=colours_wp)+
         facet_wrap(~award_comb)
 
 m <- list(
@@ -929,7 +977,7 @@ award_pre_post_week <- wikipedia %>%
 
 
 award_pre_post_week_chart <-  ggplot(award_pre_post_week, aes(week_diff, total, text=paste('Difference:', week_diff, "weeks, n=", total))) +
-        geom_col(fill="#2d4059") +
+        geom_col(fill="#02401B") +
   custom_theme +
         labs(title="Difference in time between award and wikipedia page creation by week", 
              x="Week Difference between honour and award", y="Number of wikipedia pages created") +
@@ -977,7 +1025,7 @@ award_pre_post <- wikipedia %>%
 
 
 award_pre_post_chart <-  ggplot(award_pre_post, aes(year_diff, total, text=paste('Difference:', year_diff, "years, n=", total))) +
-        geom_col(fill="#2d4059") +
+        geom_col(fill="#02401B") +
   custom_theme +
         labs(title="Difference in time between award and wikipedia page creation", 
              x="Years Difference between honour and award", y="Number of recipients")
@@ -1025,7 +1073,7 @@ award_pre_post <- post_wikipedia_awards %>%
 
 
 award_pre_post_chart <-  ggplot(award_pre_post, aes(year_diff, total, text=paste('Difference:', year_diff, "years, n=", total))) +
-        geom_col(fill="#2d4059") +
+        geom_col(fill="#02401B") +
   custom_theme +
         labs(title="Difference in time between award and wikipedia page creation", 
              x="Years Difference between honour and award", y="Number of recipients")
@@ -1075,7 +1123,7 @@ award_pre_post <- post_wikipedia_awards %>%
 
 
 award_pre_post_chart <-  ggplot(award_pre_post, aes(week_diff, total, text=paste('Difference:', week_diff, "years, n=", total))) +
-        geom_col(fill="#2d4059") +
+        geom_col(fill="#02401B") +
   geom_hline(aes(yintercept = mean))+
   custom_theme +
         labs(title="Difference in time between award and wikipedia page creation", 
@@ -1131,7 +1179,7 @@ week_diffAllYearChartLevel2 <- ggplot(week_diffAllYears2, aes(week_diff, award_c
   geom_tile() +
   custom_theme+
   scale_fill_distiller(type="seq", direction=1, na.value="black", palette="OrRd")+
-  labs(title="Time of wikipedia page creation for those who received honours after 15 Jan 2001", 
+  labs(title="Time of wikipedia  page creation for those who received honours after 15 Jan 2001", 
              x="weeks before or after award page is created", y="Number of pages / honour type")
 
 
@@ -1197,7 +1245,7 @@ ggplotly(week_diffAllYearChartLevel2, tooltip="text") %>%
 
 #### Rate of page creation for honours recipients
 
-The below chart shows a cumulative total of wikipedia pages created for those who hold an Order of Australia over time. There is a significant jump in cumulative page creation after 2005, and another visible jump around 2011.
+The below chart shows a cumulative total of wikipedia pages created for those who hold an Order of Australia over time. There is a jump in cumulative page creation after 2005, and another visible jump around 2011.
 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1214,14 +1262,16 @@ cumPageDiff <- wikipedia %>%
 
 
 cumPageChart <- ggplot(cumPageDiff, aes(wp_creation_date, cumPages, group=1, text=paste(wp_creation_date,":",cumPages))) +
-       
-        geom_line(colour="#2d4059") +
-        # geom_smooth()+
-        # scale_fill_manual(values=colours)+
+        geom_line(colour="#02401B") +
         custom_theme+
-        # scale_y_continuous(labels = percent)+
         labs(title="Daily cumulative page creation of honours recipients", 
-             x="Date of Page creation", y="Number of pages")
+             x="Date of Page creation", y="Number of pages") +
+  geom_segment(x = as.numeric(as_date("2001-01-15")), xend=as.numeric(as_date("2001-01-15")), y=0, yend=3800, linetype="dotted", size=0.3, colour="slategrey")+
+  scale_x_date(limits = as_date(c("2001-01-01", "2020-08-01")))+
+  annotate(geom="text", x = as_date("2002-04-01"), y=4000, label="Wikipedia Begins")
+  
+
+  # annotate(geom="text", x=as_date(2001-01-01), y=3900, label="Wikipedia Begins")
 
 
 m <- list(
@@ -1264,13 +1314,17 @@ cumPageyear_diff <- wikipedia %>%
 
 cumPageChartYear <- ggplot(cumPageyear_diff, aes(wp_creation_year, total, text=paste(wp_creation_year,": ", total), group=1)) +
         geom_smooth(method=lm, level=0.90, alpha=0.3, size=.5)+
-         geom_line(colour="#2d4059", width=2) +
+         geom_line(colour="#02401B", width=2) +
         # geom_smooth()+
         # scale_fill_manual(values=colours)+
         custom_theme+
         # scale_y_continuous(labels = percent)+
         labs(title="Yearly page creation", 
-             x="Date of Page creation", y="Number of pages")
+             x="Date of Page creation", y="Number of pages")+
+  geom_segment(x = 2001, xend=2001, y=0, yend=500, linetype="dotted", size=0.3, colour="slategrey")+
+  # scale_x_date(limits = as_date(c("2001-01-01", "2020-08-01")))+
+  annotate(geom="text", x = 2002.5, y=520, label="Wikipedia Begins")
+  
 
 m <- list(
   l = 80,
@@ -1324,14 +1378,17 @@ honour_v_wiki_comparison_chart <- left_join(honour_v_page_honours3, honour_v_pag
 
 honour_v_page_chart <- ggplot(honour_v_wiki_comparison_chart) +
   
-  geom_point(aes(year, honours_n, text=(paste("honours", year, honours_n))), colour="#2d4059")+
-  geom_line(aes(year, honours_n ), colour="#2d4059")+
-  geom_point(aes(year, wiki_n, text=(paste("wiki pages", year, wiki_n))),  colour="#ea5455")+
-  geom_line(aes(year, wiki_n), colour="#ea5455")+
+  geom_point(aes(year, honours_n, text=(paste("honours", year, honours_n))), colour="#D8B70A")+
+  geom_line(aes(year, honours_n ), colour="#D8B70A")+
+  geom_point(aes(year, wiki_n, text=(paste("wiki pages", year, wiki_n))),  colour="#02401B")+
+  geom_line(aes(year, wiki_n), colour="#02401B")+
   # geom_line(data=honour_v_page_wiki, aes(wikipedia_creation_year, n, group=1), colour="#ea5455")+
   custom_theme+
         labs(title="Honours awarded v wikipedia page creation", 
-             x="Year", y="Number of pages")
+             x="Year", y="Number of pages")+
+  geom_segment(x = 2001, xend=2001, y=0, yend=2000, linetype="dotted", size=0.3, colour="slategrey")+
+  annotate(geom="text", x = 2002.5, y=2100, label="Wikipedia Begins")
+  
 
   
 m <- list(
@@ -1355,7 +1412,7 @@ layout(font=t,
          margin=m)    
 
 ```
-The chart belwo shows the difference between the two points at each time period.
+The chart below shows the difference between the two points at each time period.
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 honour_v_wiki_comparison_diff<- honour_v_wiki_comparison_chart %>% 
@@ -1363,11 +1420,14 @@ honour_v_wiki_comparison_diff<- honour_v_wiki_comparison_chart %>%
   
   
 
-honour_v_wiki_comparison_diff_chart <- ggplot(honour_v_wiki_comparison_diff, aes(x=year, text=paste(year, wiki_n, honours_n, diff )))+
+honour_v_wiki_comparison_diff_chart <- ggplot(honour_v_wiki_comparison_diff, aes(x=year, text=paste(year, ":", diff )))+
   custom_theme+
-  geom_linerange(aes(ymin=wiki_n, ymax=honours_n), colour="#2d4059", size=3)+
+  geom_linerange(aes(ymin=wiki_n, ymax=honours_n), colour="#02401B", size=3)+
   labs(title="Honours awarded v wikipedia page creation (difference)", 
-             x="Year", y="Number of pages")
+             x="Year", y="Number of pages")+
+  geom_segment(x = 2001, xend=2001, y=0, yend=2000, linetype="dotted", size=0.3, colour="slategrey")+
+  annotate(geom="text", x = 2002.5, y=2100, label="Wikipedia Begins")
+  
 
 m <- list(
   l = 80,
@@ -1392,8 +1452,11 @@ layout(font=t,
 
 #### Gender and page creation
 
+Looking at page creation for all people who recievd an honour and have a wikipedia page, there were slightly more pages created for men than women before an award was receieved.  Potentially the recogition of an order prompts page creation for women?
+
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 gender_before_after  <-  wikipedia %>% 
+  
   filter(gender!="U") %>% 
   mutate(before_after = case_when(time_diff >=0 ~ "on or after honours",
                                   time_diff<0 ~ "before Honours")) %>%
@@ -1407,6 +1470,7 @@ gender_before_after  <-  wikipedia %>%
 
 
 total_before_after  <-  wikipedia %>% 
+  
   filter(gender!="U") %>% 
   mutate(before_after = case_when(time_diff >=0 ~ "on or after honours",
                                   time_diff<0 ~ "before Honours")) %>%
@@ -1418,21 +1482,117 @@ total_before_after  <-  wikipedia %>%
   mutate(prop = nn/n) %>% 
   filter()
 
-gender_ba_check <- ggplot(gender_before_after, aes(gender, prop, fill=gender, text = percent(prop))) +
+gender_before_after_chart <- ggplot(gender_before_after, aes(gender, prop, fill=gender, text = percent(prop))) +
   geom_col() +
   facet_wrap(~before_after)+
   geom_hline(data=total_before_after, aes(yintercept = prop))+
   custom_theme+
-  scale_fill_manual(values=colours_gender)
+  scale_fill_manual(values=colours_gender)+
+  scale_y_continuous(labels = percent)+
+        labs(title="Proportion of pages created before or after honour (by gender)", 
+             x="Gender", y="Proportion Number of pages")
+
+
+  m <- list(
+  l = 80,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
 
   
+gender_before_after_chart_format <- ggplotly(gender_before_after_chart, tooltip="text")
 
-ggplotly(gender_ba_check, tooltip="text")
+gender_before_after_chart_format[['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+gender_before_after_chart_format[['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+gender_before_after_chart_format %>% layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.25, text = "All Recipients with wikipedia page & coded M/F n=4443", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)
+
+
+
 
 
 ```
 
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+gender_before_after_post_wp  <-  post_wikipedia_awards %>% 
+  filter(gender!="U") %>% 
+  select(time_diff, pre_post_wikipedia, gender) %>% 
+  filter(pre_post_wikipedia=="Post") %>% 
+  mutate(before_after = case_when(time_diff >=0 ~ "on or after honours",
+                                  time_diff<0 ~ "before Honours")) %>%
+  mutate(before_after = factor(before_after, levels = c("before Honours","on or after honours"))) %>% 
+  group_by(gender) %>% 
+  add_tally() %>% 
+  group_by(gender, before_after, n) %>% 
+  tally() %>% 
+  filter(!is.na(before_after)) %>% 
+  mutate(prop = nn/n)
+
+
+total_before_after_post_wp  <-  post_wikipedia_awards %>% 
+  filter(gender!="U") %>% 
+  filter(pre_post_wikipedia=="Post") %>% 
+  mutate(before_after = case_when(time_diff >=0 ~ "on or after honours",
+                                  time_diff<0 ~ "before Honours")) %>%
+  mutate(before_after = factor(before_after, levels = c("before Honours","on or after honours"))) %>% 
+  add_tally() %>% 
+  group_by(before_after, n) %>% 
+  tally() %>% 
+  filter(!is.na(before_after)) %>% 
+  mutate(prop = nn/n) %>% 
+  filter()
+
+gender_ba_check_post_wp_chart <- ggplot(gender_before_after_post_wp, aes(gender, prop, fill=gender, text = percent(prop))) +
+  geom_col() +
+  facet_wrap(~before_after)+
+  geom_hline(data=total_before_after_post_wp, aes(yintercept = prop))+
+  custom_theme+
+  scale_fill_manual(values=colours_gender)+
+  scale_y_continuous(labels = percent)+
+          labs(title="% of pages created before/after honour for honours issued post start of wikipedia (by gender)", 
+             x="Gender", y="Proportion Number of pages")
+
+
+  
+m <- list(
+  l = 80,
+  r = 150,
+  b = 100,
+  t = 100,
+  pad = 4
+)   
+
+gender_ba_check_post_wp_chart_format <- ggplotly(gender_ba_check_post_wp_chart, tooltip="text") 
+
+gender_ba_check_post_wp_chart_format [['x']][['layout']][['annotations']][[2]][['x']] <- -.09
+gender_ba_check_post_wp_chart_format [['x']][['layout']][['annotations']][[1]][['y']] <- -.1
+
+gender_ba_check_post_wp_chart_format %>% 
+layout(font=t, 
+         annotations = 
+           list(x = 1, y = -0.2, text = "All Recipients since 15 Jan 2001 with wikipedia page & coded M/F n=2525", 
+                showarrow = F, xref='paper', yref='paper', 
+                xanchor='right', yanchor='auto', xshift=1, yshift=-2,
+                font=list(size=10)),
+          autosize=F,
+         width=800, 
+         height=500,
+         margin=m)    
+```
+
 #### Summary
+
 * There are only a small representation of Order of Australia recipients on wikipedia, but the higher the order you have the more likely you have a page
 
 * The number of Orders being announced every year is increasing, and the proportion of women receiving awards is increasing, although this is not at parity. The proportion of women and men who have an order and a wikipedia page is a similar ratio overall, but women who have a higher Order level, have a higher chance than average of also having a wikipedia page.
