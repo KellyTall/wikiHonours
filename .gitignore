@@ -1,4 +1,18 @@
-/drafts
+#csv
+*.csv
+!recipient.csv
+!wikipedia.csv
+!all_data.csv
+!week_zero.csv
+!post_wikipedia_awards.csv
+!OrderOfAus15Oct.csv
+
+# r files
+dataClean.R
+!file_prep.R
+
+# draft folder
+/drafts  
 
 # History files
 .Rhistory
