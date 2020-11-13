@@ -9,13 +9,22 @@ author: "Kelly Tall"
 date: "9/11/2020"
 
 
-output: 
+output:
         html_document:
-                df_print: paged  
+                df_print: paged
                 toc: true
-                toc_float: true     
-                fig_caption: true 
+                toc_float: true
+                fig_caption: true
 ---
+
+<!-- # --- -->
+<!-- # title: "Who do we think we are?" -->
+<!-- # author: "Kelly Tall" -->
+<!-- # date: "13/11/2020" -->
+<!-- # output: word_document -->
+<!-- # --- -->
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -30,6 +39,12 @@ library(ggraph)
 library(tidygraph)
 library(ggalluvial)
 library(wesanderson)
+# install.packages("webshot")
+webshot::install_phantomjs()
+library(captioner)
+
+library(webshot)
+# library(webshot)
 
 
 
@@ -95,7 +110,7 @@ multiple_honours_list_individials <- all_data %>%
 
 
 
-##fxing up naming issues and flattening ultiple awards to one record where earliest award date is used as honours_date and highest level is award level
+##fxing up naming issues and flattening ultiple honours to one record where earliest honour date is used as honours_date and highest level is honour level
 recipient_import <- read_csv("recipient.csv")
 
 recipient <- recipient_import %>% 
@@ -127,6 +142,11 @@ post_wikipedia_awards <- post_wikipedia_awards_import %>%
   mutate(state = factor(state, levels = c("NSW", "VIC", "QLD", "SA", "TAS", "WA", "ACT", "NT", "Other"))) %>% 
         mutate(award_comb = factor(award_comb, levels = c("ADK", "AC", "AO", "AM", "OAM")))
 
+table_nums <- captioner(prefix = "Table")
+figure_nums <- captioner(prefix = "Figure")
+
+
+
 ```
 
 ### Research Questions
@@ -151,13 +171,13 @@ The Order of Australia honours system was established in 1975, and has the follo
 
 More information about the Order of Australia can be found here: https://en.wikipedia.org/wiki/Order_of_Australia.
 
-Awards are issued with the following divisions:
+Honours are issued with the following divisions:
 
 1. General (G): awarded to Australian Citizens 
 2. Military (M): warded to Australian Military
-3. Honourary: General (HG) and Military (HM) awards can also be issued to non-citizens as honourary awards. A new distinction was created recently to honour permanent-residents. These used to be indicated as "HG", but are now indicated by "HP".
+3. Honourary: General (HG) and Military (HM) honours can also be issued to non-citizens as honourary honours. A new distinction was created recently to honour permanent-residents. These used to be indicated as "HG", but are now indicated by "HP".
 
-People can receive multiple Order of Australia honours in their lifetime. People can have their awards terminated by the Council, or return or refuse their awards.  Some awards are issued or recorded as anonymous on the honours Database.
+People can receive multiple Order of Australia honours in their lifetime. People can have their honours terminated by the Council, or return or refuse their honours.  Some honours are issued or recorded as anonymous on the honours Database.
 
 ### Data used in analysis
 
@@ -172,30 +192,39 @@ The data used in this analysis is based on:
 2. <b>Wikipedia articles</b> linked to Order of Australia recipients and their creation date. This was last extracted from wikidata on 7th November, 2020. From this a list of wikipedia article IDs were collected, and these were used to collect the article creation date.
 
 
-The two data sets were joined using the honours ID as a match. Those without an hounours ID in the data set extracted from wikidata tended to be listed as “anonymous”, or had a terminated award. Some of these records were able to be matched with an honours ID, but those not were excluded from the final data set. It would be possible to match these records manually at a future date, but for the purpose of this analysis these twenty or so records are not included.  Some of the anonymus or terminated honours also had no "award date" and these have been excluded from any of the analysis that uses date of award. 
+The two data sets were joined using the honours ID as a match. Those without an hounours ID in the data set extracted from wikidata tended to be listed as “anonymous”, or had a terminated award. Some of these records were able to be matched with an honours ID, but those not were excluded from the final data set. It would be possible to match these records manually at a future date, but for the purpose of this analysis these twenty or so records are not included.  Some of the anonymus or terminated honours also had no "honour date" and these have been excluded from any of the analysis that uses date of award. 
 
 
 ### Dataset characteristics
 
 
 
-<!-- #### 1. Anonymous Awards - <b>TO UPDATE</b> -->
+<!-- #### 1. Anonymous Honours - <b>TO UPDATE</b> -->
 
 <!-- Of the `r nrow(all_data)` honours issued since 1975, there are UPDATE that are listed as being issued to an "anonymous" recipient. The reasons why an honour is listed as anonymous could be as follows;  -->
 <!-- * The recipient has requested anonynmity -->
 <!-- * Their honour has been withdrawn by the council -->
 <!-- * the recipient has refused, or returned their honour -->
 
-<!-- Records from the PMO dataset that are listed as anonymous or teminated awards are imcomplete. Anonymous awards have only been if there has been an honour date, and a wikipedia page and a page creation date. If the record is missing the Honours date, they have been excluded from the dataset.  -->
+<!-- Records from the PMO dataset that are listed as anonymous or teminated honours are imcomplete. Anonymous honours have only been if there has been an honour date, and a wikipedia page and a page creation date. If the record is missing the Honours date, they have been excluded from the dataset.  -->
 
 
-#### 1. Multiple Awards
+#### 1. Multiple Honours
 
 Of these `r nrow(all_data)` records, there are `r nrow(multiple_honours_list_individials)` individuals who have received more than one honour, and these account for `r nrow(multiple_honours_list)` individual honours. In order to account for multiple honour dates connecting to one wikipedia article and page creation date we have used the date of the <i>earliest award</i>. When referring to the individuals honour level, we use the most <i>recent honour</i>. 
 
 For example, Angus Houston has received four honours. His earliest honour was an AM in 1990, and his most recent was a Knighthood in 2015. His wikipedia page was created in 2005. The table below illustrates his records extracted from the data set that contains all honours records.
 
-```{r angusMultiple, eval=TRUE, echo=FALSE, fig.width=1}
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+table_nums(name = "angus1", "All Orders of Australia Receieved by Angus Houston")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+
+`r table_nums("angus1")`
+
+```{r eval=TRUE, echo=FALSE, fig.width=1}
+
 
 angusExample <- all_data %>% 
   select(name, award_comb, honours_date, wp_creation_date) %>% 
@@ -205,10 +234,16 @@ angusExample <- all_data %>%
 angusExample
 ```
 
-The table below illustrates his record extracted from the data set based on individual recipients. It shows that his honour level refers to his most recent honour in 2015 and his first award date refers to the first honour he received in 1990. 
 
+The table below illustrates his record extracted from the data set based on individual recipients. It shows that his honour level refers to his most recent honour in 2015 and his first honour date refers to the first honour he received in 1990. 
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+table_nums(name = "angus2",  "Angus Houston's single record ")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r table_nums("angus2")`
 
-```{r angusSingle, eval=TRUE, echo=FALSE, fig.width=1}
+```{r eval=TRUE, echo=FALSE, fig.width=1}
 
 angusExample2 <- recipient %>% 
   filter(name == "Angus Houston") %>% 
@@ -218,12 +253,21 @@ angusExample2
 
 ```
 
-<!-- To make it clear for the reader and what data set we are using, refer to the chart footer. "All Honours" refers to <i>honours</i> issued, noting that an individual can hold multiple honours.  "All Recipients" refers to the <i>individuals or people</i> receiving awards and is usually used when looking at connections to wikipedia. -->
+
+<!-- To make it clear for the reader and what data set we are using, refer to the chart footer. "All Honours" refers to <i>honours</i> issued, noting that an individual can hold multiple honours.  "All Recipients" refers to the <i>individuals or people</i> receiving honours and is usually used when looking at connections to wikipedia. -->
 
 
-#### 2. Award Divisions 
+#### 2. honour Divisions 
 
 As outlined above, honours are issued with different divisions, and the breakdown is displayed below
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+table_nums(name = "division",  "Breakdown of Divisions")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r table_nums("division")`
 
 ```{r eval=TRUE, echo=FALSE}
 
@@ -236,11 +280,11 @@ division
 divisionNA <- recipient %>% 
   select(division) %>% 
   filter(is.na(division)) 
-  
 
 ```
 
-The HG and HM division is only held by 121 recipients, but some of them we can assume would have a wikipedia page whether they have an order of Australia or not. For example, Jacques Cousteau, Jerry Lewis, or Mother Theresa are all honorary recipients of an Order of Australia. There are some people though who have received honary awards whose "emminence" is linked to Australia, such as Jill Kerr, Joern Utzon and Googie Withers, and who also have a wikipedia article. Because of this, all of the honourary records have been left in the data set.
+
+The HG and HM division is only held by 121 recipients, but some of them we can assume would have a wikipedia page whether they have an order of Australia or not. For example, Jacques Cousteau, Jerry Lewis, or Mother Theresa are all honorary recipients of an Order of Australia. There are some people though who have received honary honours whose "emminence" is linked to Australia, such as Jill Kerr, Joern Utzon and Googie Withers, and who also have a wikipedia article. Because of this, all of the honourary records have been left in the data set.
 
 Please note there are `r nrow(divisionNA)` honours issued without a Division recorded on the PMO database. Many of these appear to be military honours from who they are awared to and the description.
 
@@ -249,9 +293,18 @@ Please note there are `r nrow(divisionNA)` honours issued without a Division rec
 
 #### 3. Date calculations
 
-The Australian Honors system began in 1975, and wikipedia was established on 15 January 2001. In order to calclate the time difference bewteen the award date and the wikipedia creation date, any award issued before 15 Jan 2001, has a "start date" of 15 January 2001. The table below shows the recipients first honour date (first_honours_date), the date the time difference is calculted on (new_honours_date), the date their wikipedia entry was created, and the difference in time from honour to page creation. 
+The Australian Honors system began in 1975, and wikipedia was established on 15 January 2001. In order to calclate the time difference bewteen the honour date and the wikipedia creation date, any honour issued before 15 Jan 2001, has a "start date" of 15 January 2001. The table below shows the recipients first honour date (first_honours_date), the date the time difference is calculted on (new_honours_date), the date their wikipedia entry was created, and the difference in time from honour to page creation. 
 
-<b>A.D Hope</b> received their award in 1981. The earliest a wikpedia page could be created for them is 2001, and their page was created in 2004, so the difference is three years. Looking further down <b>Aaron Kierney</b> had a page created for them in 2012, and they received their honours in 2020. The time difference is -8 years, meaning their page was created 8 years <i>before</i> they received their honours. We can also see that number of days and weeks f=differemce has been calculated. 
+<b>A.D Hope</b> received their honour in 1981. The earliest a wikpedia page could be created for them is 2001, and their page was created in 2004, so the difference is three years. Looking further down <b>Aaron Kierney</b> had a page created for them in 2012, and they received their honours in 2020. The time difference is -8 years, meaning their page was created 8 years <i>before</i> they received their honours. We can also see that number of days and weeks difference has been calculated. 
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+table_nums(name = "date_calcs",  "Date calculations (scroll to see full row)")
+
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r table_nums("date_calcs")`
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -292,6 +345,7 @@ prop_wp <- recipient %>%
 
 ```
 
+
 ### Addressing the research Questions 
 
 #### How many honours recipients have a wikipedia Page?
@@ -301,7 +355,16 @@ The Order of Australia data set represents a group of indviduals who have been r
 
 Looking at all honours recipients as a whole, there is only a small proportion of them that have a wikipedia page. From `r nrow(recipient)` recipients of an Order of Australia, there are `r nrow(page_num)` who have a wikipedia page which is `r percent(prop_wp$prop)`.   
 
-<i>(Please note the charts in this section show all <b>recipients</b> of an Order of Australia. If they have received multiple awards, we are only including their first award issued so it matches with one page created for them. The creation of the wikipedia page may not have occurred in the same year as the honour, but simply indicates if they have a page or not)</i>
+<i>(Please note the charts in this section show all <b>recipients</b> of an Order of Australia. If they have received multiple honours, we are only including their first honour issued so it matches with one page created for them. The creation of the wikipedia page may not have occurred in the same year as the honour, but simply indicates if they have a page or not)</i>
+
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig1","Proportion of recipients who have wikipedia page")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig1")`
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -368,11 +431,19 @@ chart1 %>%
          width=800, 
          height=500,
          margin=m)
-
 ```
 
 
-Over time the number of honours issued each year has increased. The line represents the average number of reward recipients who have a page, which is around 121 for each year.  In more recent years, there has been a higher number of recipients who have wikipedia pages, as the number of awards increases. 
+
+Over time the number of honours issued each year has increased. The line represents the average number of reward recipients who have a page, which is around 121 for each year.  In more recent years, there has been a higher number of recipients who have wikipedia pages, as the number of honours increases. 
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig2","Number of honours issued over time with or without a wikipedia page")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig2")`
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -423,7 +494,16 @@ layout(font=t,
   
 ```
 
-While the absolute numbers of recipients with wikipedia pages has gone up over time, the proportion of pages created remains relatively steady. The average is around 11.5% of honours that have a page created in their name, 
+While the absolute numbers of recipients with wikipedia pages has gone up over time, the proportion of pages created remains relatively steady. The average is around 11.5% of honours that have a page created in their name.
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig3","Proportion of honours issued over time with or without a wikipedia page")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig3")`
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -472,6 +552,14 @@ layout(font=t,
 ```
 
 Focussing on just the proportion of recipients who have received an honour each year and have a wikipedia page, we can see that over time the number of those with pages has slighlty trended below the average.
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig4","Proportion of honours issued over time with or without a wikipedia page")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig4")`
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -509,6 +597,13 @@ A wikipedia page can be created for someone who is "worthy of notice". We can hy
 
 The first chart below shows the numbers receieving different levels each year, and the second chart shows proportions. The numbers of both honours and levels, and proportions have not remained fixed over the years. 
 
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig5","Number of Honours levels awarded over time")
+```
+
+`r figure_nums("fig5")`
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -547,6 +642,15 @@ layout(font=t,
 
 ```
 
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig6","Proportion of Honours levels awarded over time")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig6")`
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -579,6 +683,14 @@ layout(font=t,
 
 
 As hypothesised the higher the award, the more likely you are to have a wikipedia page. All 19 Dames and Knights have a page, while 85% (n=504) of ACs have page from a total of n=591. There are 3,160 recipients of an AO, and 38% of them have a wikipedia page. This means there are still n=1947 holders of an AO that do not have a wikipedia page. 13% of the holders of an AM, and 4% of those wth an OAM have a wikipedia page.
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig7","Proportion of honour recipients that have a wikipedia article page by highest honour received")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig7")`
 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
@@ -596,7 +708,7 @@ pagePropAwardChart <- ggplot(pagePropAward, aes(award_comb, prop, fill=wikipedia
                                                 text = paste(percent(prop)))) +
         geom_bar(position="fill", stat="identity") +
         custom_theme+
-        labs(title="Proportion of award recipients that have a wikipedia article page by highest award received", 
+        labs(title="Proportion of honour recipients that have a wikipedia article page by highest honour received", 
              x="Order of Australia (membership levels)", y="Proportion of recipients") +
         scale_y_continuous(labels = percent)+
         scale_fill_manual(values=colours_wp)
@@ -620,6 +732,15 @@ ggplotly(pagePropAwardChart, tooltip = 'text') %>%
 
 ```
 Since the inception of the Orer of Australia the number of women receiving an honour has been rising over time.
+
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig8","Number of honours awarded over time split by gender")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig8")`
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -659,7 +780,17 @@ layout(font=t,
          margin=m)  
 ```
 
-While the number has been increasing, there is still a lower proportion of women who receive an honour. For the awards issued so far in 2020, 42% of the awards went to women.
+While the number has been increasing, there is still a lower proportion of women who receive an honour. For the honours issued so far in 2020, 42% of the honours went to women.
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig9","Proportion of honours awarded over time split by gender")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig9")`
+
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -688,6 +819,17 @@ layout(font=t,
 
 ```
 On average of all the mean rececing an honour each year, 71 will also have a wikipedia page, whereas for women it's 26.  
+
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig10","Number of honour recipients that have a wikipedia article page by Gender")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig10")`
+
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -718,7 +860,7 @@ gender_diff_wp <- ggplot(gender_split_page, aes(honours_year, n, fill=wikipedia_
   geom_hline(data=gender_split_page_subset, aes(yintercept = mean))+
   custom_theme+
   scale_fill_manual(values=colours_wp)+
-  labs(title="Number of award recipients that have a wikipedia article page by Gender", subtitle = "Line represents total proportion to highlight differences",
+  labs(title="Number of honour recipients that have a wikipedia article page by Gender", subtitle = "Line represents total proportion to highlight differences",
              x="Year of Honour", y="Number of recipients") +
   geom_segment(x = 2001, xend=2001, y=0, yend=1500, linetype="dotted", size=0.04, colour="slategray")+
   annotate(geom="text", x=2001, y=1550, label="WP begins", size=3)
@@ -762,6 +904,16 @@ layout(font=t,
 ```
 
 While the total proportion of recipients is lower, as are the numbers of women wo have wikipedia pages, there is a higher proportion of women with wikipedia pages who have receievd ACs and slightly more for women who have receievd AOs. This may be the result of specific campaigns to create more pages for notable women in Australia?   
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig11","Honour Levels: Proportion of honour recipients that have a wikipedia article page by Gender")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig11")`
+
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -783,7 +935,7 @@ pagePropGenderAward <- recipient %>%
 pagePropGenderAwardChart <- ggplot(pagePropGenderAward, aes(gender, prop, fill=wikipedia_page,text = paste(percent(prop)))) +
         geom_bar(position="fill", stat="identity") +
         custom_theme+
-        labs(title="Honour Levels: Proportion of award recipients that have a wikipedia article page by Gender", 
+        labs(title="Proportion of honour recipients that have a wikipedia article page by Gender and Honours levels", 
              x="Order of Australia (membership levels)", y="Proportion of recipients") +
 
         scale_y_continuous(labels = percent)+
@@ -829,6 +981,16 @@ test %>% layout(font=t,
 ```
 
 Compared to the total averages we can see the difference in proportions of women's and men's pages, with the lines representing the total proportional average for each honours level. 
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig12","Proportion of honour recipients that have a wikipedia article page by Gender and Honours level")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig12")`
+
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -856,7 +1018,7 @@ pageAverageGenderAwardChart <- ggplot(pageAverageTotal, aes(gender, totalWPProp,
         geom_col() +
         geom_hline(aes(yintercept = totalProp))+
         custom_theme+
-        labs(title="Proportion of award recipients that have a wikipedia article page by Gender", subtitle = "Line represents total proportion to highlight differences",
+        labs(title="Proportion of honour recipients that have a wikipedia article page by Gender", subtitle = "Line represents total proportion to highlight differences",
              x="Order of Australia (membership levels)", y="Proportion of recipients") +
 
         scale_y_continuous(labels = percent)+
@@ -908,11 +1070,21 @@ award_pre_post_day_mean <- wikipedia %>%
 
 #### Do pages follow honours, or do honours follow pages?
 
-Whether an award issued in a given year has a page or not tells us proportions of recipients that have a page, but it hides details on whether the wikipedia page was created for the recipient before or after they received their Order of Australia.
+Whether an honour issued in a given year has a page or not tells us proportions of recipients that have a page, but it hides details on whether the wikipedia page was created for the recipient before or after they received their Order of Australia.
 
 The below analysis looks at the difference in time between honour and page creation date. 
 
-The first chart shows the amount of time by day, between receieving the award and when their wikipedia page was created. There are a few different peaks shown, with the highest being twenty pages created on day zero, or the day that a person receives their award.  (The chart is quite pale as there are many frequency counts per day, but it's possible to brush over the chart with your mouse to highlight a particular area.) The average page creation each day is `r (round(award_pre_post_day_mean$mean, 2))` and on day zero it is 20.
+The first chart shows the amount of time by day, between receieving the honour and when their wikipedia page was created. There are a few different peaks shown, with the highest being twenty pages created on day zero, or the day that a person receives their award.  (The chart is quite pale as there are many frequency counts per day, but it's possible to brush over the chart with your mouse to highlight a particular area.) The average page creation each day is `r (round(award_pre_post_day_mean$mean, 2))` and on day zero it is 20.
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig13","Difference in time between honour and wikipedia page creation by day")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig13")`
+
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -929,7 +1101,7 @@ award_pre_post_day <- wikipedia %>%
 award_pre_post_day_chart <-  ggplot(award_pre_post_day, aes(time_diff, total, text=paste('Difference:', time_diff, "days, n=", total))) +
         geom_col(fill="black") +
   custom_theme +
-        labs(title="Difference in time between award and wikipedia page creation by day", 
+        labs(title="Difference in time between honour and wikipedia page creation by day", 
              x="Days Difference between honour and award", y="Number of wikipedia pages created") +
   theme(panel.grid.major.x = element_blank())
   # geom_hline(aes(yintercept = mean))
@@ -946,7 +1118,7 @@ m <- list(
 
 ggplotly(award_pre_post_day_chart, tooltip="text") %>% 
   layout(font=t, 
-         title = list(text = paste0('Difference in time between award and wikipedia page creation by day',
+         title = list(text = paste0('Difference in time between honour and wikipedia page creation by day',
                                     '<br>',
                                     '<sup>',
                                     'Negative numbers are those who have page created <i>before</i> honour, and postive have page created <i>after</i> honour',
@@ -964,6 +1136,16 @@ ggplotly(award_pre_post_day_chart, tooltip="text") %>%
 ```
 
 Rolling the daily increments up to seven day increments, shows the frequencies a little clearer, with 47 pages created on week 0, which is the highest number for page creation.
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig14","Difference in time between honour and wikipedia page creation by week")
+```
+<div style="<div style="margin-top:30px;">
+</div>
+`r figure_nums("fig14")`
+
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -979,7 +1161,7 @@ award_pre_post_week <- wikipedia %>%
 award_pre_post_week_chart <-  ggplot(award_pre_post_week, aes(week_diff, total, text=paste('Difference:', week_diff, "weeks, n=", total))) +
         geom_col(fill="#02401B") +
   custom_theme +
-        labs(title="Difference in time between award and wikipedia page creation by week", 
+        labs(title="Difference in time between honour and wikipedia page creation by week", 
              x="Week Difference between honour and award", y="Number of wikipedia pages created") +
   theme(panel.grid.major.x = element_blank())
 
@@ -995,7 +1177,7 @@ m <- list(
 
 ggplotly(award_pre_post_week_chart, tooltip="text") %>% 
   layout(font=t, 
-         title = list(text = paste0('Difference in time between award and wikipedia page creation',
+         title = list(text = paste0('Difference in time between honour and wikipedia page creation',
                                     '<br>',
                                     '<sup>',
                                     'Negative numbers are those who have page created <i>before</i> honour, and postive have page created <i>after</i> honour',
@@ -1012,7 +1194,16 @@ ggplotly(award_pre_post_week_chart, tooltip="text") %>%
 
 ```
 
-Rolling the time increments up to a year, shows us that while there is a peak of 209 pages created over the year the award is received, there is a peak for all award recipients to have a page created between 3 and seven years after receieving their honour. 
+Rolling the time increments up to a year, shows us that while there is a peak of 209 pages created over the year the honour is received, there is a peak for all honour recipients to have a page created between 3 and seven years after receieving their honour. 
+
+<br>
+<br>
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+figure_nums(name = "fig15","Difference in time between honour and wikipedia page creation by year")
+```
+
+`r figure_nums("fig15")`
+
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -1027,7 +1218,7 @@ award_pre_post <- wikipedia %>%
 award_pre_post_chart <-  ggplot(award_pre_post, aes(year_diff, total, text=paste('Difference:', year_diff, "years, n=", total))) +
         geom_col(fill="#02401B") +
   custom_theme +
-        labs(title="Difference in time between award and wikipedia page creation", 
+        labs(title="Difference in time between honour and wikipedia page creation", 
              x="Years Difference between honour and award", y="Number of recipients")
 
 m <- list(
@@ -1042,7 +1233,7 @@ m <- list(
 
 ggplotly(award_pre_post_chart, tooltip="text") %>% 
   layout(font=t, 
-         title = list(text = paste0('Difference in time between award and wikipedia page creation by year',
+         title = list(text = paste0('Difference in time between honour and wikipedia page creation by year',
                                     '<br>',
                                     '<sup>',
                                     'Negative numbers are those who have page created <i>before</i> honour, and postive have page created <i>after</i> honour',
@@ -1058,9 +1249,20 @@ ggplotly(award_pre_post_chart, tooltip="text") %>%
          margin=m)     
 
 ```
-This analysis though may be misleading, as we are including all honours issued since the start of the Order. We can exclude all those awards received before the start of wikipedia on Januray 15 2001 so we give all pages an "equal chance" of having a page created for them without any lag.
+This analysis though may be misleading, as we are including all honours issued since the start of the Order. We can exclude all those honours received before the start of wikipedia on Januray 15 2001 so we give all pages an "equal chance" of having a page created for them without any lag.
 
 Once we remove all honours issued before the start of wikipedia, the distrbution skews towards pages being created before receiving an honour, with a peak of 198 pages created the year of receiving an honour.
+
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig16","Difference in time between honour and wikipedia page creation by year for all honours received after 15 Jan 2001")
+```
+
+`r figure_nums("fig16")`
+
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -1075,7 +1277,7 @@ award_pre_post <- post_wikipedia_awards %>%
 award_pre_post_chart <-  ggplot(award_pre_post, aes(year_diff, total, text=paste('Difference:', year_diff, "years, n=", total))) +
         geom_col(fill="#02401B") +
   custom_theme +
-        labs(title="Difference in time between award and wikipedia page creation", 
+        labs(title="Difference in time between honour and wikipedia page creation", 
              x="Years Difference between honour and award", y="Number of recipients")
 
 m <- list(
@@ -1090,7 +1292,7 @@ m <- list(
 
 ggplotly(award_pre_post_chart, tooltip="text") %>% 
   layout(font=t, 
-         title = list(text = paste0('Difference in time between award and wikipedia page creation (post wikipedia only)',
+         title = list(text = paste0('Difference in time between honour and wikipedia page creation (post wikipedia only)',
                                     '<br>',
                                     '<sup>',
                                     'Negative numbers are those who have page created <i>before</i> honour, and postive have page created <i>after</i> honour',
@@ -1108,7 +1310,17 @@ ggplotly(award_pre_post_chart, tooltip="text") %>%
 
 
 ```
-Rolling this data out to a weekly level, we can see that there is a noticeable spike in page creation of 47 compared to other weeks. The average number of pages created each week is 2.2, and while there are other peaks that are above this average, the week of an award being announced appears to prompt the most page creations.
+Rolling this data out to a weekly level, we can see that there is a noticeable spike in page creation of 47 compared to other weeks. The average number of pages created each week is 2.2, and while there are other peaks that are above this average, the week of an honour being announced appears to prompt the most page creations.
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig17","Difference in time between honour and wikipedia page creation by week for all honours received after 15 Jan 2001")
+```
+
+`r figure_nums("fig17")`
+
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 
@@ -1126,7 +1338,7 @@ award_pre_post_chart <-  ggplot(award_pre_post, aes(week_diff, total, text=paste
         geom_col(fill="#02401B") +
   geom_hline(aes(yintercept = mean))+
   custom_theme +
-        labs(title="Difference in time between award and wikipedia page creation", 
+        labs(title="Difference in time between honour and wikipedia page creation", 
              x="Weeks Difference between honour and award", y="Number of recipients")+
   theme(panel.grid.major.x = element_blank())
 
@@ -1142,7 +1354,7 @@ m <- list(
 
 ggplotly(award_pre_post_chart, tooltip="text") %>% 
   layout(font=t, 
-         title = list(text = paste0('Difference in time between award and wikipedia page creation (post wikipedia only)',
+         title = list(text = paste0('Difference in time between honour and wikipedia page creation (post wikipedia only)',
                                     '<br>',
                                     '<sup>',
                                     'Negative numbers are those who have page created <i>before</i> honour, and postive have page created <i>after</i> honour',
@@ -1161,7 +1373,18 @@ ggplotly(award_pre_post_chart, tooltip="text") %>%
 
 ```
 
-Looking at number of pages created each week by award level, the below chart shows via colour the different frequencies of page creation 52 weeks before and after an honour is received. The intensity of colour means more page creation activity, and this shows that over this period there is more activity at week 0. This peak at week 0 is higher than the average number of pages created for each honors level. For AOs the average number of ages reated was 1.3, and for the week that honours are announced it rises to 18. Likewise for ACs the average is 1.1 and for the week honours are announced it is at 9, and for AMs the average is 1.4 and at honours week it is 14. 
+Looking at number of pages created each week by honour level, the below chart shows via colour the different frequencies of page creation 52 weeks before and after an honour is received. The intensity of colour means more page creation activity, and this shows that over this period there is more activity at week 0. This peak at week 0 is higher than the average number of pages created for each honors level. For AOs the average number of ages reated was 1.3, and for the week that honours are announced it rises to 18. Likewise for ACs the average is 1.1 and for the week honours are announced it is at 9, and for AMs the average is 1.4 and at honours week it is 14. 
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig18","Weekly difference in time between honour and wikipedia page creation (post wikipedia only)")
+```
+
+`r figure_nums("fig18")`
+
+
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 week_diffAllYears2 <- post_wikipedia_awards %>%
@@ -1180,18 +1403,18 @@ week_diffAllYearChartLevel2 <- ggplot(week_diffAllYears2, aes(week_diff, award_c
   custom_theme+
   scale_fill_distiller(type="seq", direction=1, na.value="black", palette="OrRd")+
   labs(title="Time of wikipedia  page creation for those who received honours after 15 Jan 2001", 
-             x="weeks before or after award page is created", y="Number of pages / honour type")
+             x="weeks before or after honour page is created", y="Number of pages / honour type")
 
 
 ggplotly(week_diffAllYearChartLevel2, tooltip="text") %>% 
   layout(font=t, 
-         title = list(text = paste0('Weekly difference in time between award and wikipedia page creation (post wikipedia only)',
+         title = list(text = paste0('Weekly difference in time between honour and wikipedia page creation (post wikipedia only)',
                                     '<br>',
                                     '<sup>',
-                                    'Showing 52 weeks prior and post award week.',
+                                    'Showing 52 weeks prior and post honour week.',
                                     '</sup>')),
          annotations = 
-           list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving award post-wikipedia 6mnths before or after n=223", 
+           list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving honour post-wikipedia 6mnths before or after n=223", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1203,6 +1426,18 @@ ggplotly(week_diffAllYearChartLevel2, tooltip="text") %>%
 ```
 
 Looking at gender, men have an average of 1.8 pages created for them every week, while for women it's 1.4. Over the week of the honours announcements, the numbers of pages created a much higher, with men having 29 pages, and women 18. The week of honours announcements appears to be a week with increaed page creation activity. 
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig19","Weekly difference in time  (52 weeks pre and post) between honour and wikipedia page creation (post wikipedia only)")
+```
+
+`r figure_nums("fig19")`
+
+
+
 
 ```{r echo=FALSE, message=FALSE, fig.width=12, warning=FALSE}
 week_diffAllYears2 <- post_wikipedia_awards %>%
@@ -1221,18 +1456,18 @@ week_diffAllYearChartLevel2 <- ggplot(week_diffAllYears2, aes(week_diff, gender,
   custom_theme+
   scale_fill_distiller(type="seq", direction=1, na.value="black", palette="OrRd")+
   labs(title="Time of wikipedia page creation for those who received honours after 15 Jan 2001", 
-             x="weeks before or after award page is created", y="Number of pages / honour type")
+             x="weeks before or after honour page is created", y="Number of pages / honour type")
 
 
 ggplotly(week_diffAllYearChartLevel2, tooltip="text") %>% 
   layout(font=t, 
-         title = list(text = paste0('Weekly difference in time between award and wikipedia page creation (post wikipedia only)',
+         title = list(text = paste0('Weekly difference in time between honour and wikipedia page creation (post wikipedia only)',
                                     '<br>',
                                     '<sup>',
-                                    'Showing 52 weeks prior and post award week.',
+                                    'Showing 52 weeks prior and post honour week.',
                                     '</sup>')),
          annotations = 
-           list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving award post-wikipedia 6mnths before or after n=223", 
+           list(x = 1, y = -0.13, text = "All Recipients w. WP page receiving honour post-wikipedia 6mnths before or after n=223", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1246,6 +1481,16 @@ ggplotly(week_diffAllYearChartLevel2, tooltip="text") %>%
 #### Rate of page creation for honours recipients
 
 The below chart shows a cumulative total of wikipedia pages created for those who hold an Order of Australia over time. There is a jump in cumulative page creation after 2005, and another visible jump around 2011.
+
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig20","Daily cumulative page creation of honours recipients")
+```
+
+`r figure_nums("fig20")`
 
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
@@ -1297,6 +1542,18 @@ layout(font=t,
 
 
 In order to see the peaks and drops more clearly, pages have been aggregated to a year level. Using yearly numbers and adding in a trend line, we can see that 2005 and 2006 saw an above-average amount of pages created, and smaller peaks in 2011, and 2014.  There has been though, a general decline since the peak of page creation in 2005-2006. This decline
+
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig21","Annual wikipedia page creation for honours recipients")
+```
+
+`r figure_nums("fig21")`
+
+
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -1351,6 +1608,17 @@ Looking at the rate of pages created versus the number of honours for all honour
 
 
 The lines are moving appart from one and other over time. As honours increases, the number of pages created for people with an Order of Australia is decreasing. 
+
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig22","Annual number of honours awarded and wikipedia page creation")
+```
+
+`r figure_nums("fig22")`
+
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 
@@ -1413,6 +1681,15 @@ layout(font=t,
 
 ```
 The chart below shows the difference between the two points at each time period.
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig23","Difference in numbers: Annual number of honours awarded and wikipedia page creation")
+```
+
+`r figure_nums("fig23")`
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 
 honour_v_wiki_comparison_diff<- honour_v_wiki_comparison_chart %>% 
@@ -1452,7 +1729,16 @@ layout(font=t,
 
 #### Gender and page creation
 
-Looking at page creation for all people who recievd an honour and have a wikipedia page, there were slightly more pages created for men than women before an award was receieved.  Potentially the recogition of an order prompts page creation for women?
+Looking at page creation for all people who recievd an honour and have a wikipedia page, there were slightly more pages created for men than women before an honour was receieved.  Potentially the recogition of an order prompts page creation for women?
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig24","Difference in pages created before or after hnours (all recipients with wikipedia page)")
+```
+
+`r figure_nums("fig24")`
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 gender_before_after  <-  wikipedia %>% 
@@ -1523,6 +1809,16 @@ gender_before_after_chart_format %>% layout(font=t,
 
 
 ```
+
+<br>
+<br>
+
+```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+figure_nums(name = "fig25","Difference in pages created before or after hnours (all recipients awarded after 15 Jan 2001 with wikipedia page )")
+```
+
+`r figure_nums("fig25")`
 
 ```{r eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
 gender_before_after_post_wp  <-  post_wikipedia_awards %>% 
@@ -1595,8 +1891,8 @@ layout(font=t,
 
 * There are only a small representation of Order of Australia recipients on wikipedia, but the higher the order you have the more likely you have a page
 
-* The number of Orders being announced every year is increasing, and the proportion of women receiving awards is increasing, although this is not at parity. The proportion of women and men who have an order and a wikipedia page is a similar ratio overall, but women who have a higher Order level, have a higher chance than average of also having a wikipedia page.
+* The number of Orders being announced every year is increasing, and the proportion of women receiving honours is increasing, although this is not at parity. The proportion of women and men who have an order and a wikipedia page is a similar ratio overall, but women who have a higher Order level, have a higher chance than average of also having a wikipedia page.
 
-* The announcement of the honours appears to prompt a higher than average number of pages which can be seen on the day and the week of the award. The year an award is announced also has a higher rate of page creation if the sample is limited to those receieving an honour after the start of wkipedia. The intensity of page creation is also high on the week of the announcement for all honours levels and also when looking at gender.
+* The announcement of the honours appears to prompt a higher than average number of pages which can be seen on the day and the week of the award. The year an honour is announced also has a higher rate of page creation if the sample is limited to those receieving an honour after the start of wkipedia. The intensity of page creation is also high on the week of the announcement for all honours levels and also when looking at gender.
 
-* The rate of pages being created for people holding an award appears to be dropping after a peak of creation in 2005-2006. While the number of awards is increasing the nuber of pages is decreasing. The gap between those that have received an honour, and those that have receievd an honour and have a wikipeida page is widening as page creation declines.
+* The rate of pages being created for people holding an honour appears to be dropping after a peak of creation in 2005-2006. While the number of honours is increasing the nuber of pages is decreasing. The gap between those that have received an honour, and those that have receievd an honour and have a wikipeida page is widening as page creation declines.
