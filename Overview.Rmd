@@ -17,14 +17,14 @@ output:
                 fig_caption: true
 ---
 
-<!-- # --- -->
-<!-- # title: "Who do we think we are?" -->
-<!-- # author: "Kelly Tall" -->
-<!-- # date: "13/11/2020" -->
-<!-- # output: word_document -->
-<!-- # --- -->
 
 
+<!-- --- -->
+<!-- title: "Who do we think we are?" -->
+<!-- author: "Kelly Tall" -->
+<!-- date: "13/11/2020" -->
+<!-- output: word_document -->
+<!-- --- -->
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -1670,7 +1670,7 @@ m <- list(
 ggplotly(honour_v_page_chart, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients since 15 Jan 2015 n=24701", 
+           list(x = 1, y = -0.2, text = "All Recipients since 15 Jan 2001 n=24701", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
@@ -1717,7 +1717,7 @@ m <- list(
 ggplotly(honour_v_wiki_comparison_diff_chart, tooltip="text") %>% 
 layout(font=t, 
          annotations = 
-           list(x = 1, y = -0.2, text = "All Recipients since 15 Jan 2015 n=24701", 
+           list(x = 1, y = -0.2, text = "All Recipients since 15 Jan 2001 n=24701", 
                 showarrow = F, xref='paper', yref='paper', 
                 xanchor='right', yanchor='auto', xshift=1, yshift=-2,
                 font=list(size=10)),
